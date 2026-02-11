@@ -45,22 +45,23 @@ SynchroVision software is structured into four core modules:
 ---
 
 ## 🛠️ Installation
+**Target System:** Windows / Linux / macOS  
+**Recommended Environment:** Conda (Anaconda or Miniconda)
 
-### Prerequisites
-* **Python 3.x**
-* **GPU:** Recommended for ML training and tracking modules (CUDA-enabled device).
+## 1. Prerequisites & File Structure
+---
+Before installing, ensure your project folder is organized as follows:
+* **`1. Python code/`**: Contains the source code (e.g., `main.py`).
+* **`models/`**: Stores SAM models (e.g., `sam_vit_b_01ec64.pth`).
+* **`requirements.txt`**: List of required Python libraries.
+---
+## 2. Installation Steps (Conda)
 
-### Setup
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/YourUsername/SynchroVision.git](https://github.com/YourUsername/SynchroVision.git)
-    cd SynchroVision
-    ```
+### Step 1: Create the Environment
+Open your terminal (Anaconda Prompt) and run the following command to create a new environment named `xray_image_software` with Python 3.12:
 
-2.  **Install dependencies:**
-    It is recommended to use a virtual environment (Conda or venv).
-    ```bash
-    pip install -r requirements.txt
+```bash
+conda create -n xray_image_software python=3.12 pip spyder
     ```
 
 ---
