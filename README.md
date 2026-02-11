@@ -120,6 +120,8 @@ Dukyong Kim: kdy0414@u.northwestern.edu
 
 Due to the large file size of high-speed X-ray video and 3D tomography data, the sample datasets and tutorial videos for **SynchroVision** are hosted externally.
 
+[![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
+
 ### 🔗 [Download All Assets Here (Google Drive Link)](INSERT_YOUR_GOOGLE_DRIVE_LINK_HERE)
 
 **The external repository contains:**
