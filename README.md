@@ -85,3 +85,29 @@ pip install -r requirements.txt
 ```bash
 ollama pull llama3
 ```
+## 🚀 Usage
+(1) Launch the Software: Run the main Python script in your IDE or terminal.
+```bash
+python main.py
+```
+(2) Select Workspace: Upon launch, select the root folder inside the software package when prompted.
+(3) Main Menu Navigation: The dashboard provides access to the four main tools:
+
+* Normalize Data (GPU): For drift correction and background removal.
+
+* Label Data (SAM AI): For annotating regions of interest.
+
+* Train & Track (YOLO): For training the model and tracking objects in video files.
+
+* Plot Geometry (Data Vis): For visualizing results and using the LLM chatbot.
+
+* Event Tagger: For manual logging of specific experimental events.
+
+## 📄 Citation
+If you use SynchroVision in your research, please cite:
+
+Kim, D., et al. "SynchroVision: An end-to-end open-source artificial intelligence-powered software for multi-dimensional x-ray image analysis."
+
+## 📬 Contact
+
+Dukyong Kim: kdy0414@u.northwestern.edu
