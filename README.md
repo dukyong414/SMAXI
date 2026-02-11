@@ -97,5 +97,3 @@ If you use SynchroVision in your research, please cite:
 ## 📬 Contact
 
 * **Dukyong Kim:** kdy0414@u.northwestern.edu
-* **Tao Sun:** taosun@northwestern.edu
-* **Department:** Mechanical Engineering, Northwestern University
