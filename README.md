@@ -111,8 +111,9 @@ Kim, D., et al. "SynchroVision: An end-to-end open-source artificial intelligenc
 ## 📬 Contact
 
 Dukyong Kim: kdy0414@u.northwestern.edu
-
-
+<br />
+<br />
+<br />
 ---
 
 ## 📥 Sample Data & Tutorials
