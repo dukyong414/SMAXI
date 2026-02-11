@@ -15,7 +15,7 @@ While upgraded storage rings enable high-frame-rate acquisition over extended ex
 Unlike closed-source commercial alternatives, SynchroVision is fully customizable and integrates state-of-the-art machine learning models (SAM 2, YOLO-seg, Llama 3) to facilitate accurate and fast object segmentation, object tracking, and transient geometric analysis.
 
 ## 🖼️ Diagram
-
+The below diagram summarizes the key features of SynchroVision software.
 <img width="1789" height="1091" alt="Graphical abstract" src="https://github.com/user-attachments/assets/c6ba1649-75ec-42e6-8798-60729ea82247" />
 
 ---
