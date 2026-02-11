@@ -111,6 +111,7 @@ Kim, D., et al. "SynchroVision: An end-to-end open-source artificial intelligenc
 ## 📬 Contact
 
 Dukyong Kim: kdy0414@u.northwestern.edu
+
 <br />
 <br />
 <br />
@@ -122,7 +123,7 @@ Due to the large file size of high-speed X-ray video and 3D tomography data, the
 
 [![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
 
-### 🔗 [Download All Assets Here (Google Drive Link)](INSERT_YOUR_GOOGLE_DRIVE_LINK_HERE)
+### 🔗 [Download All Assets Here (Google Drive Link)](https://drive.google.com/drive/folders/1woC6zvyxjAKdQ0fuNuI6pKW8LH5Ltft8?usp=sharing)
 
 **The external repository contains:**
 
