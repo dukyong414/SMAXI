@@ -2,7 +2,8 @@
 
 **An End-to-End AI-Powered Software for Multi-Dimensional X-ray Image Analysis**
 
-Developed by FAST-AM Lab, Northwestern University (Department of Mechanical Engineering) in collaboration with Argonne National Laboratory (Advanced Photon Source)*
+Developed by _FAST_-AM Lab, Northwestern University (Department of Mechanical Engineering) [link](https://fast-am.mech.northwestern.edu/)
+Research was conducted in active collaboration with Argonne National Laboratory (Advanced Photon Source)*
 
 ---
 
