@@ -119,21 +119,30 @@ Dukyong Kim: kdy0414@u.northwestern.edu
 
 ## 📥 Sample Data & Tutorials
 
-Due to the large file size of high-speed X-ray video and 3D tomography data, the sample datasets and tutorial videos for **SynchroVision** are hosted externally.
+Due to large file sizes, the complete dataset, source code package, and tutorial materials are hosted externally.
 
-[![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
 
-### 🔗 [Download All Assets Here (Google Drive Link)](https://drive.google.com/drive/folders/1woC6zvyxjAKdQ0fuNuI6pKW8LH5Ltft8?usp=sharing)
+### 🔗 [Download All Assets Here (Google Drive Link)](INSERT_YOUR_GOOGLE_DRIVE_LINK_HERE)
 
 **The external repository contains:**
 
-* **GUI Assets:** Background and Logo images required for the interface.
-* **Sample Input:**
-    * High-speed X-ray cine files (Raw & Thermal Drift datasets).
-    * 3D X-ray tomography images (Human head phantom).
-    * Labeled mask data for YOLO training.
-* **Sample Output:** Normalized images, geometry analysis CSVs, and a pre-trained YOLO model (`.pt`).
-* **Tutorials:** Step-by-step video guides (`.mp4`) and presentation slides (`.pdf`/`.pptx`).
-
+* 📂 **1. Root folder:** The core software directory containing the main Python scripts.
+* 📂 **2. GUI Assets:**
+    * Background image for GUI setup
+    * Logo image for GUI setup
+* 📂 **3. Sample Input Files:**
+    * High-speed X-ray image (cine file)
+    * High-speed X-ray image (thermal drift correction demo)
+    * Labeled mask data for YOLO training
+    * X-ray tomography 2D images
+    * X-ray tomography 3D image (human head phantom)
+* 📂 **4. Sample Output Files:**
+    * CSV file for geometry analysis
+    * High-speed X-ray image (normalized output)
+    * Trained YOLO model (`.pt` file)
+* 📚 **Tutorials:**
+    * Tutorial Slides (`.pdf` and `.pptx`)
+    * X-ray image analysis program tutorial video (`.mp4` - Recorded Jan 22, 2026)
+[![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
 **Setup Instruction:**
-After downloading, unzip and copy the folders (`2.`, `3.`, `4.`) directly into the **root directory** of the SynchroVision software so the code can automatically detect them.
+Download all folders (`1.` through `4.`) and place them in your workspace. Ensure the folder structure remains exactly as downloaded so the software can locate dependencies automatically.
