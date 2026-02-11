@@ -111,3 +111,25 @@ Kim, D., et al. "SynchroVision: An end-to-end open-source artificial intelligenc
 ## 📬 Contact
 
 Dukyong Kim: kdy0414@u.northwestern.edu
+
+
+---
+
+## 📥 Sample Data & Tutorials
+
+Due to the large file size of high-speed X-ray video and 3D tomography data, the sample datasets and tutorial videos for **SynchroVision** are hosted externally.
+
+### 🔗 [Download All Assets Here (Google Drive Link)](INSERT_YOUR_GOOGLE_DRIVE_LINK_HERE)
+
+**The external repository contains:**
+
+* **GUI Assets:** Background and Logo images required for the interface.
+* **Sample Input:**
+    * High-speed X-ray cine files (Raw & Thermal Drift datasets).
+    * 3D X-ray tomography images (Human head phantom).
+    * Labeled mask data for YOLO training.
+* **Sample Output:** Normalized images, geometry analysis CSVs, and a pre-trained YOLO model (`.pt`).
+* **Tutorials:** Step-by-step video guides (`.mp4`) and presentation slides (`.pdf`/`.pptx`).
+
+**Setup Instruction:**
+After downloading, unzip and copy the folders (`2.`, `3.`, `4.`) directly into the **root directory** of the SynchroVision software so the code can automatically detect them.
