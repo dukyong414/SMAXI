@@ -6,6 +6,9 @@ Developed by _FAST_-AM Lab, Northwestern University (Department of Mechanical En
 
 Research was conducted in active collaboration with Argonne National Laboratory (Advanced Photon Source)*
 
+<img width="1784" height="466" alt="Logo" src="https://github.com/user-attachments/assets/ecd49cb9-cc2c-4d28-86c2-cb8352646a43" />
+
+
 ---
 
 ## 📖 Overview
