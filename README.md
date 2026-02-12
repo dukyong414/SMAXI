@@ -121,7 +121,7 @@ Dukyong Kim: kdy0414@u.northwestern.edu
 Due to large file sizes, the complete dataset, source code package, and tutorial materials are hosted externally.
 
 
-### 🔗 [Download All Assets Here (Google Drive Link)](INSERT_YOUR_GOOGLE_DRIVE_LINK_HERE)
+### 🔗 [Download All Assets Here (Google Drive Link)](https://drive.google.com/drive/folders/1woC6zvyxjAKdQ0fuNuI6pKW8LH5Ltft8?usp=sharing)
 
 **The external repository contains:**
 
