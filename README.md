@@ -35,7 +35,7 @@ SynchroVision software is structured into four core modules:
 * **Image Normalization:** Background removal and contrast enhancement to resolve vague image features (Grey-scale or Binary normalization available).
 
 ### 2. ML-Powered Object Annotation & Tracking
-* **Zero-Shot Detection:** Utilizes **SAM 1 and 2 (Segment Anything Model)** for robust and accurate image annotation without extensive pre-training.
+* **Zero-Shot Detection:** Utilizes **SAM 1 and 2 (Segment Anything Model)** for robust and accurate image annotation without extensive pre-training. This is highly beneficial in reducing the data labeling cost and time.
 * **Object Tracking:** Implements **YOLO-seg** for high-speed tracking of dynamic objects (e.g., keyholes) in both 2D X-ray images and 3D computer tomography (CT) scans.
 
 ### 3. Interactive Geometry Feature Analysis
