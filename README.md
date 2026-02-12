@@ -149,3 +149,13 @@ Download all folders (`1.` through `4.`) and place them in your workspace. Ensur
 Below is the tutorial video.
 [![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
 
+---
+
+## 🧠 AI Models & Acknowledgments
+
+This software leverages state-of-the-art artificial intelligence models to achieve high-precision analysis:
+
+* **SAM (Segment Anything Model)** by Meta AI – Integrated for zero-shot image segmentation and annotation.
+* **YOLO-seg (You Only Look Once)** by Ultralytics – Integrated for high-speed object tracking and instance segmentation.
+* **Llama 3** by Meta AI – Powering the local "Chat with Data" and geometric feature analysis.
+* **Google Gemini** – Utilized for software architecture planning, code development, and optimization.
