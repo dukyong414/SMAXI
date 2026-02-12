@@ -145,5 +145,7 @@ Due to large file sizes, the complete dataset, source code package, and tutorial
  
 **Setup Instruction:**
 Download all folders (`1.` through `4.`) and place them in your workspace. Ensure the folder structure remains exactly as downloaded so the software can locate dependencies automatically.
+<br />
+Below is the tutorial video.
 [![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
 
