@@ -79,7 +79,7 @@ pip install -r requirements.txt
 **Step 4: Install Llama 3 (Optional)** This software uses Ollama for the local LLM chat feature.
 
 (1) Download Ollama from this link. 
-[Visit Ollama website](ollama.com/download)
+[Visit Ollama website](https://ollama.com/download)
 
 (2) Once installed, run this command in your terminal:
 ```bash
