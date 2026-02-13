@@ -1,11 +1,11 @@
 # SynchroVision
 
-**An End-to-End AI-Powered Software for Multi-Dimensional X-ray Image Analysis**
+**An Open-source & End-to-End & AI-Powered Software for Multi-Dimensional X-ray Image Analysis**
 
-Developed by **FAST-AM Lab**, Northwestern University (Department of Mechanical Engineering)  
+Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department of Mechanical Engineering)  
 [Visit Lab Website](https://fast-am.mech.northwestern.edu/)
 
-*Research was conducted in active collaboration with Argonne National Laboratory (Advanced Photon Source)*
+*Research was conducted in active collaboration with Advanced Photon Source, Argonne National Laboratory, Lemont, IL*
 
 <img width="1784" height="487" alt="Logo" src="https://github.com/user-attachments/assets/ef9646a3-3f87-4641-9bc1-13122e4ac1c4" />
 
@@ -15,7 +15,7 @@ Developed by **FAST-AM Lab**, Northwestern University (Department of Mechanical 
 
 **SynchroVision** is an open-source software designed to address the "Big Data" challenges posed by next-generation high-energy synchrotron facilities, such as the upgraded Advanced Photon Source (APS-U).
 
-While upgraded storage rings enable high-frame-rate acquisition over extended exposure times, they create massive data volumes and often result in reduced absorption contrast. SynchroVision solves this by providing a robust, user-friendly pipeline for **processing transient high-speed X-ray video**, **2D static images**, and **3D tomography data**.
+While upgraded storage rings enable high-frame-rate acquisition over extended exposure times and allows a wide variety of x-ray experiment, they create massive data volumes and brighter beam often result in reduced absorption contrast in the collected images. Our developed SynchroVision solves this by providing a robust, user-friendly pipeline for **processing transient high-speed X-ray video**, **2D static images**, and **3D tomography data**.
 
 Unlike closed-source commercial alternatives, SynchroVision is fully customizable and integrates state-of-the-art machine learning models (SAM 2, YOLO-seg, Llama 3) to facilitate accurate and fast object segmentation, object tracking, and transient geometric analysis.
 
@@ -32,19 +32,19 @@ SynchroVision software is structured into four core modules:
 
 ### 1. Image Processing (Stabilization & Normalization)
 * **Thermal Drift Correction:** Computer vision-assisted automated stabilization of high-speed X-ray images to correct for thermal drift-triggered surface line changes during laser powder bed fusion (L-PBF) experiments.
-* **Image Normalization:** Background removal and contrast enhancement to resolve vague image features (Grey-scale or Binary normalization available).
+* **Image Normalization:** Background removal and contrast enhancement to resolve vague image features (Grey-scale or Binary normalization are both available).
 
 ### 2. ML-Powered Object Annotation & Tracking
-* **Zero-Shot Detection:** Utilizes **SAM 1 and 2 (Segment Anything Model)** for robust and accurate image annotation without extensive pre-training. This is highly beneficial in reducing the data labeling cost and time.
+* **Zero-Shot Detection:** Utilizes **SAM 1 and 2 (Segment Anything Model)** for robust and accurate image annotation without extensive pre-training. This is highly beneficial in reducing the data labeling cost and time, where many commercial labeling apps require subscription. 
 * **Object Tracking:** Implements **YOLO-seg** for high-speed tracking of dynamic objects (e.g., keyholes) in both 2D X-ray images and 3D computer tomography (CT) scans.
 
 ### 3. Interactive Geometry Feature Analysis
-* **Geometric Quantification:** Automatically extracts and plots features such as keyhole depth, width, area, and aspect ratio over time.
-* **LLM Integration:** Features a built-in chatbot powered by **Llama 3**. Users can "chat" with their data to extract advanced insights and statistical summaries interactively.
+* **Geometric Quantification:** Automatically extracts and plots object's transient geometricl features such as keyhole depth, width, area, and aspect ratio over time.
+* **LLM Integration:** Features a built-in chatbot powered by **Llama 3**. Users can "chat" with extracted data to understand advanced insights and statistical summaries interactively.
 
 ### 4. Transient Advanced Image Analysis
 * **Event Logging:** A dedicated interface for tagging transient events (e.g., spatter, bubble formation, pore generation).
-* **In-situ & Ex-situ Label-time Difference Calculator:** Interactive GUI for calculating the difference in In-situ and Ex-situ labeled time to compensate for time lags.
+* **In-situ & Ex-situ Label-time Difference Calculator:** Interactive GUI for calculating the difference in In-situ and Ex-situ labeled time to compensate for inherent time lags.
 
 ---
 
