@@ -139,14 +139,6 @@ python main.py
 
 * Event Tagger: For manual logging of specific experimental events.
 
-<br />
-<br />
-<br />
-<br />
-<br />
-<br />
-
-
 
 ## 📄 Citation
 If you use SynchroVision in your research, please cite:
