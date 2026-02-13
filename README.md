@@ -75,12 +75,7 @@ Python files can be found in the repository. If any modifications are made to Py
 * 📚 **Tutorials:**
     * Tutorial Slides (`.pdf` and `.pptx`)
     * X-ray image analysis program tutorial video (`.mp4` - Recorded Jan 22, 2026)
- 
-**Setup Instruction:**
-Download all folders (`1.` through `4.`) and place them in your workspace. Ensure the folder structure remains exactly as downloaded so the software can locate dependencies automatically.
-<br />
-Below is the tutorial video.
-[![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
+
 
 ---
 
@@ -122,23 +117,38 @@ pip install -r requirements.txt
 ollama pull llama3
 ```
 ## 🚀 Usage
-(1) Launch the Software: Run the main Python script in your IDE or terminal.
-```bash
-python main.py
-```
-(2) Select Workspace: Upon launch, select the root folder inside the software package when prompted.
-(3) Main Menu Navigation: The dashboard provides access to the four main tools:
 
-* Normalize Data (GPU): For drift correction and background removal.
+Follow the steps below to launch the software using your preferred IDE.
 
-* Label Data (SAM AI): For annotating regions of interest.
+### [Option A] Using Visual Studio Code (Recommended)
+1. **Open the Project:** Launch VS Code and open the folder `1. Python code`.
+2. **Select Interpreter:** * *Note: Ensure Python is installed prior to this step.*
+   * Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac) to open the Command Palette.
+   * Type **"Python: Select Interpreter"** and select it.
+   * Choose the `xray_image_software` environment from the list.
+3. **Run the Application:**
+   * Open `main.py` from the file explorer.
+   * Click the **Play** button in the top-right corner of the editor.
 
-* Train & Track (YOLO): For training the model and tracking objects in video files.
+### [Option B] Using Spyder
+1. **Activate the Environment:** Open your terminal or Anaconda Prompt and run:
+   ```bash
+   conda activate xray_image_software
+   ```
+2. **Launch Spyder:** Start the IDE by typing
+   ```bash
+   spyder
+   ```
+3. **Run the Software**
+   * Once Spyder opens, open main.py from the file menu.
+   * Press F5 or click the green Run icon in the toolbar.
+   
 
-* Plot Geometry (Data Vis): For visualizing results and using the LLM chatbot.
-
-* Event Tagger: For manual logging of specific experimental events.
-
+<br />
+<br />
+Below is the tutorial video (Video does not cover recently-updated featuers, but would assist in installing the software).
+<br />
+[![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
 
 ## 📄 Citation
 If you use SynchroVision in your research, please cite:
