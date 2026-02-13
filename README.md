@@ -48,7 +48,43 @@ SynchroVision software is structured into four core modules:
 
 ---
 
-## 🛠️ Installation
+## 📦 Installation Package Explanation
+
+Due to large file sizes, the complete dataset, source code package, and tutorial materials are hosted externally.
+Python files can be found in the repository. If any modifications are made to Python files in repository, users can replace them with Python files in the Google Drive below. 
+
+
+### 🔗 [Download All Assets Here (Google Drive Link)](https://drive.google.com/drive/folders/1woC6zvyxjAKdQ0fuNuI6pKW8LH5Ltft8?usp=sharing)
+
+**The external repository contains:**
+
+* 📂 **1. Root folder:** The core software directory containing the main Python scripts, README.txt, requirements.txt, SAM 1&2 models 
+* 📂 **2. GUI Assets:**
+    * Background image for GUI setup
+    * Logo image for GUI setup
+* 📂 **3. Sample Input Files:**
+    * High-speed X-ray image (cine file)
+    * High-speed X-ray image (thermal drift correction demo)
+    * Labeled mask data for YOLO training
+    * X-ray tomography 2D images (images from APS XSD-IMG group)
+    * X-ray tomography 3D image (human head opendata, MSD Cardiac dataset)
+* 📂 **4. Sample Output Files:**
+    * CSV file for geometry analysis
+    * High-speed X-ray image (normalized output)
+    * Trained YOLO model (`.pt` file)
+* 📚 **Tutorials:**
+    * Tutorial Slides (`.pdf` and `.pptx`)
+    * X-ray image analysis program tutorial video (`.mp4` - Recorded Jan 22, 2026)
+ 
+**Setup Instruction:**
+Download all folders (`1.` through `4.`) and place them in your workspace. Ensure the folder structure remains exactly as downloaded so the software can locate dependencies automatically.
+<br />
+Below is the tutorial video.
+[![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
+
+---
+
+## 🛠️ Software Installation
 
 **Target System:** Windows / Linux / macOS  
 **Recommended Environment:** Conda (Anaconda or Miniconda)
@@ -72,7 +108,7 @@ conda activate xray_image_software
 
 **Step 3: Install Python Libraries** Navigate to the root folder (where requirements.txt is located) and install dependencies:
 ```bash
-cd /d "PATH_TO_YOUR_SOFTWARE_FOLDER"
+cd /d "Modify this path (PATH_TO_YOUR_SOFTWARE_FOLDER)_(file path must end with/1. Root folder)"
 pip install -r requirements.txt
 ```
 
@@ -103,6 +139,15 @@ python main.py
 
 * Event Tagger: For manual logging of specific experimental events.
 
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+
+
+
 ## 📄 Citation
 If you use SynchroVision in your research, please cite:
 
@@ -111,48 +156,6 @@ Kim, D., et al. "SynchroVision: An end-to-end open-source artificial intelligenc
 ## 📬 Contact
 
 Dukyong Kim: kdy0414@u.northwestern.edu
-
-<br />
-<br />
-<br />
-<br />
-<br />
-<br />
-
-## 📥 Sample Data & Tutorials
-
-Due to large file sizes, the complete dataset, source code package, and tutorial materials are hosted externally.
-
-
-### 🔗 [Download All Assets Here (Google Drive Link)](https://drive.google.com/drive/folders/1woC6zvyxjAKdQ0fuNuI6pKW8LH5Ltft8?usp=sharing)
-
-**The external repository contains:**
-
-* 📂 **1. Root folder:** The core software directory containing the main Python scripts.
-* 📂 **2. GUI Assets:**
-    * Background image for GUI setup
-    * Logo image for GUI setup
-* 📂 **3. Sample Input Files:**
-    * High-speed X-ray image (cine file)
-    * High-speed X-ray image (thermal drift correction demo)
-    * Labeled mask data for YOLO training
-    * X-ray tomography 2D images
-    * X-ray tomography 3D image (human head phantom)
-* 📂 **4. Sample Output Files:**
-    * CSV file for geometry analysis
-    * High-speed X-ray image (normalized output)
-    * Trained YOLO model (`.pt` file)
-* 📚 **Tutorials:**
-    * Tutorial Slides (`.pdf` and `.pptx`)
-    * X-ray image analysis program tutorial video (`.mp4` - Recorded Jan 22, 2026)
- 
-**Setup Instruction:**
-Download all folders (`1.` through `4.`) and place them in your workspace. Ensure the folder structure remains exactly as downloaded so the software can locate dependencies automatically.
-<br />
-Below is the tutorial video.
-[![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
-
----
 
 ## 🧠 AI Models & Acknowledgments
 
