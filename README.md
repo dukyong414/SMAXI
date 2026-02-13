@@ -148,7 +148,8 @@ Follow the steps below to launch the software using your preferred IDE.
 <br />
 Below is the tutorial video (Video does not cover recently-updated featuers, but would assist in installing the software).
 <br />
-[Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
+
+[![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
 
 ## 📄 Citation
 If you use SynchroVision in your research, please cite:
