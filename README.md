@@ -15,10 +15,10 @@ Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department 
 
 SMAXI solves this by providing a robust, user-friendly pipeline for processing transient high-speed 2D X-ray video, 3D computed tomography (CT) data, and 4D in-situ tomography.
 
-Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 2, YOLOv8, Llama 3) to automate and accelerate image stabilization, precise object annotation, dynamic tracking, and complex geometric feature analysis. 🖼️ Diagram
+Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 2, YOLOv8, Llama 3) to automate and accelerate image stabilization, precise object annotation, dynamic tracking, and complex geometric feature analysis.
 
 ## 🖼️ Diagram
-The below diagram summarizes the key features of SynchroVision software.
+The diagram below summarizes the core architecture and key modules of the SMAXI software.
 
 <img width="1789" height="1091" alt="Graphical abstract" src="https://github.com/user-attachments/assets/c6ba1649-75ec-42e6-8798-60729ea82247" />
 
@@ -26,30 +26,30 @@ The below diagram summarizes the key features of SynchroVision software.
 
 ## ✨ Key Features
 
-SynchroVision software is structured into four core modules:
+SMAXI is structured into four primary analytical modules, supplemented by advanced auxiliary tools:
 
 ### 1. Image Processing (Stabilization & Normalization)
-* **Thermal Drift Correction:** Computer vision-assisted automated stabilization of high-speed X-ray images to correct for thermal drift-triggered surface line changes during laser powder bed fusion (L-PBF) experiments.
-* **Image Normalization:** Background removal and contrast enhancement to resolve vague image features (Grey-scale or Binary normalization are both available).
+* **Thermal Drift Correction:** Computer vision-assisted automated stabilization of high-speed X-ray images to track and correct for thermal drift-triggered surface shifts (e.g., during laser powder bed fusion).
+* **Image Normalization:** Background removal and contrast enhancement designed to resolve vague features and isolate phenomena like keyholes and melt pools. Supports both continuous grayscale and binary normalization, with optional CLAHE illumination flattening.
 
-### 2. ML-Powered Object Annotation & Tracking
-* **Zero-Shot Detection:** Utilizes **SAM 1 and 2 (Segment Anything Model)** for robust and accurate image annotation without extensive pre-training. This is highly beneficial in reducing the data labeling cost and time, where many commercial labeling apps require subscription. 
-* **Object Tracking:** Implements **YOLO-seg** for high-speed tracking of dynamic objects (e.g., keyholes) in both 2D X-ray images and 3D computer tomography (CT) scans.
+### 2. ML-Powered Object Annotator
+* **Zero-Shot Detection:** Utilizes foundational **Segment Anything Models (SAM 1 & SAM 2)** for robust, prompt-based 2D, 3D, and 4D object segmentation. This drastically reduces the tedious manual labeling overhead required by traditional polygon methods, replacing it with efficient point-and-click or bounding-box interactions.
 
-### 3. Interactive Geometry Feature Analysis
-* **Geometric Quantification:** Automatically extracts and plots object's transient geometricl features such as keyhole depth, width, area, and aspect ratio over time.
-* **LLM Integration:** Features a built-in chatbot powered by **Llama 3**. Users can "chat" with extracted data to understand advanced insights and statistical summaries interactively.
+### 3. ML-Powered Object Tracker
+* **Object Tracking:** Implements YOLOv8 architecture trained directly on SAM-generated masks for automated, continuous high-speed tracking of dynamic target objects (e.g., rapidly evolving keyhole vapor depressions).
 
-### 4. Transient Advanced Image Analysis
-* **Event Logging:** A dedicated interface for tagging transient events (e.g., spatter, bubble formation, pore generation).
-* **In-situ & Ex-situ Label-time Difference Calculator:** Interactive GUI for calculating the difference in In-situ and Ex-situ labeled time to compensate for inherent time lags.
+### 4. Interactive Geometry Feature Analyser
+* **Geometric Quantification:** Automatically extracts, quantifies, and plots temporal geometric metrics—such as object depth, width, area, and aspect ratio—derived directly from the tracking data.
+* **LLM Integration:** Automatically extracts, quantifies, and plots temporal geometric metrics—such as object deptFeatures a built-in interactive conversational assistant powered by Llama 3 (via Ollama). Users can seamlessly query their extracted datasets in natural language to quickly retrieve statistical insights and summaries.width, area, and aspect ratio—derived directly from the tracking data.
+
+### Auxiliary feature
+* **Transient Event Tagger:** A dedicated interface for manually identifying, tagging, and exporting localized transient events (e.g., spatter, bubble formation, or pore generation) with precise spatial and temporal coordinates.
 
 ---
 
 ## 📦 Installation Package Explanation
 
-Due to large file sizes, the complete dataset, source code package, and tutorial materials are hosted externally.
-Python files can be found in the repository. If any modifications are made to Python files in repository, users can replace them with Python files in the Google Drive below. 
+Due to large file sizes, the complete dataset, source code package, and tutorial materials are hosted externally. Python files can be found in the repository. If any modifications are made to Python files in the repository, users can seamlessly replace them with the updated files from the Google Drive below.
 
 
 ### 🔗 [Download All Assets Here (Google Drive Link)](https://drive.google.com/drive/folders/1woC6zvyxjAKdQ0fuNuI6pKW8LH5Ltft8?usp=sharing)
