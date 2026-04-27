@@ -28,7 +28,7 @@ The diagram below summarizes the core architecture and key modules of the SMAXI 
 
 SMAXI is structured into four primary analytical modules, supplemented by advanced auxiliary tools:
 
-### 1. Image Processing (Stabilization & Normalization)
+### 1. Image Pre-processor (Image Stabilization & Normalization)
 * **Thermal Drift Correction:** Computer vision-assisted automated stabilization of high-speed X-ray images to track and correct for thermal drift-triggered surface shifts (e.g., during laser powder bed fusion).
 * **Image Normalization:** Background removal and contrast enhancement designed to resolve vague features and isolate phenomena like keyholes and melt pools. Supports both continuous grayscale and binary normalization, with optional CLAHE illumination flattening.
 
