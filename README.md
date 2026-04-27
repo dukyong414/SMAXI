@@ -1,9 +1,23 @@
 # SynchroVision
 
+## Project Overview
+
 ![Logo](https://github.com/dukyong414/SynchroVision/raw/main/Logo.png)
 
-![Diagram](https://github.com/dukyong414/SynchroVision/raw/main/Abstract.png)
+This is an example of a project that synchronizes data effectively. 
 
-## Description
+![Abstract Diagram](https://github.com/dukyong414/SynchroVision/raw/main/Abstract.png)
 
-[Description of the SynchroVision project]
+## Features
+
+- Synchronizes data in real time
+- Supports multiple data formats
+
+## Installation
+
+1. Clone the repository
+2. Install dependencies
+
+## Usage
+
+Simply run the application and follow the instructions.
