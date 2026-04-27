@@ -1,6 +1,6 @@
 # SMAXI
 
-**An Open-source & End-to-End & AI-Powered Software for Multi-Dimensional X-ray Image Analysis**
+**Software for Machine-learning Analysis of X-ray Images: An Open-source, End-to-End, AI-Powered Platform**
 
 Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department of Mechanical Engineering)  
 [Visit Lab Website](https://fast-am.mech.northwestern.edu/)
@@ -11,11 +11,11 @@ Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department 
 
 ## 📖 Overview
 
-**SynchroVision** is an open-source software designed to address the "Big Data" challenges posed by next-generation high-energy synchrotron facilities, such as the upgraded Advanced Photon Source (APS-U).
+**SMAXI (Software for Machine-learning Analysis of X-ray Images)** is an open-source platform designed to address the "Big Data" bottlenecks inherent in modern full-field X-ray imaging. While advancements in both laboratory-scale X-ray sources and high-energy synchrotron facilities enable rapid, high-resolution data acquisition, the manual processing of these massive, multi-dimensional datasets has become prohibitively tedious.
 
-While upgraded storage rings enable high-frame-rate acquisition over extended exposure times and allows a wide variety of x-ray experiment, they create massive data volumes and brighter beam often result in reduced absorption contrast in the collected images. Our developed SynchroVision solves this by providing a robust, user-friendly pipeline for **processing transient high-speed X-ray video**, **2D static images**, and **3D tomography data**.
+SMAXI solves this by providing a robust, user-friendly pipeline for processing transient high-speed 2D X-ray video, 3D computed tomography (CT) data, and 4D in-situ tomography.
 
-Unlike closed-source commercial alternatives, SynchroVision is fully customizable and integrates state-of-the-art machine learning models (SAM 2, YOLO-seg, Llama 3) to facilitate accurate and fast object segmentation, object tracking, and transient geometric analysis.
+Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 2, YOLOv8, Llama 3) to automate and accelerate image stabilization, precise object annotation, dynamic tracking, and complex geometric feature analysis. 🖼️ Diagram
 
 ## 🖼️ Diagram
 The below diagram summarizes the key features of SynchroVision software.
