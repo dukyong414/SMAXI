@@ -5,7 +5,7 @@
 Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department of Mechanical Engineering)  
 [Visit Lab Website](https://fast-am.mech.northwestern.edu/)
 
-<img width="1784" height="487" alt="Logo" src="https://github.com/user-attachments/assets/ef9646a3-3f87-4641-9bc1-13122e4ac1c4" />
+<img width="1784" height="487" alt="Logo" src="Logo.png" />
 
 ---
 
@@ -20,7 +20,7 @@ Unlike closed-source commercial alternatives that restrict customization, SMAXI 
 ## 🖼️ Diagram
 The diagram below summarizes the core architecture and key modules of the SMAXI software.
 
-<img width="1789" height="1091" alt="Graphical abstract" src="https://github.com/user-attachments/assets/c6ba1649-75ec-42e6-8798-60729ea82247" />
+<img width="1789" height="1091" alt="Graphical abstract" src="Abstract.png" />
 
 ---
 
