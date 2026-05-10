@@ -149,10 +149,7 @@ Below is the tutorial video (Video does not cover recently-updated featuers, but
 
 [![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
 
-## 📄 Citation
-If you use SynchroVision in your research, please cite:
 
-Kim, D., et al. "SynchroVision: An end-to-end open-source artificial intelligence-powered software for multi-dimensional x-ray image analysis."
 
 ## 📬 Contact
 
