@@ -1,6 +1,6 @@
 # SMAXI
 
-**Software for Machine-learning Analysis of X-ray Images: An Open-source, End-to-End, AI-Powered Platform**
+**SMAXI (Software for Machine-learning Analysis of X-ray Images): An Open-source, End-to-End, AI-Powered Platform**
 
 Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department of Mechanical Engineering)  
 [Visit Lab Website](https://fast-am.mech.northwestern.edu/)
@@ -11,11 +11,11 @@ Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department 
 
 ## 📖 Overview
 
-**SMAXI (Software for Machine-learning Analysis of X-ray Images)** is an open-source platform designed to address the "Big Data" bottlenecks inherent in modern full-field X-ray imaging. While advancements in both laboratory-scale X-ray sources and high-energy synchrotron facilities enable rapid, high-resolution data acquisition, the manual processing of these massive, multi-dimensional datasets has become prohibitively tedious.
+**SMAXI (Software for Machine-learning Analysis of X-ray Images)** is an open-source platform designed to address the "Big Data" bottlenecks inherent in modern full-field X-ray imaging. While advancements in both laboratory-scale x-ray sources and high-energy synchrotron facilities enable rapid, high-resolution data acquisition, the manual processing of these massive, multi-dimensional datasets has become prohibitively tedious.
 
-SMAXI solves this by providing a robust, user-friendly pipeline for processing transient high-speed 2D X-ray video, 3D computed tomography (CT) data, and 4D in-situ tomography.
+SMAXI solves this by providing a robust, user-friendly pipeline for processing transient high-speed 2D x-ray video, 3D computed tomography (CT) data, and 4D in-situ tomography.
 
-Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 2, YOLOv8, Llama 3) to automate and accelerate image stabilization, precise object annotation, dynamic tracking, and complex geometric feature analysis.
+Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 2, YOLOv12, Llama 3) to automate and accelerate image stabilization, precise object annotation, dynamic tracking, and complex geometric feature analysis.
 
 ## 🖼️ Diagram
 The diagram below summarizes the core architecture and key modules of the SMAXI software.
@@ -29,14 +29,14 @@ The diagram below summarizes the core architecture and key modules of the SMAXI 
 SMAXI is structured into four primary analytical modules, supplemented by advanced auxiliary tools:
 
 ### 1. Image Pre-processor (Image Stabilization & Normalization)
-* **Thermal Drift Correction:** Computer vision-assisted automated stabilization of high-speed X-ray images to track and correct for thermal drift-triggered surface shifts (e.g., during laser powder bed fusion).
+* **Thermal Drift Correction:** Computer vision-assisted automated stabilization of high-speed x-ray images to track and correct for thermal drift-triggered surface shifts (e.g., substrate's thermal expansion during laser powder bed fusion).
 * **Image Normalization:** Background removal and contrast enhancement designed to resolve vague features and isolate phenomena like keyholes and melt pools. Supports both continuous grayscale and binary normalization, with optional CLAHE illumination flattening.
 
-### 2. ML-Powered Object Annotator
+### 2. ML-Powered Object Segmenter
 * **Zero-Shot Detection:** Utilizes foundational **Segment Anything Models (SAM 1 & SAM 2)** for robust, prompt-based 2D, 3D, and 4D object segmentation. This drastically reduces the tedious manual labeling overhead required by traditional polygon methods, replacing it with efficient point-and-click or bounding-box interactions.
 
 ### 3. ML-Powered Object Tracker
-* **Object Tracking:** Implements YOLOv8 architecture trained directly on SAM-generated masks for automated, continuous high-speed tracking of dynamic target objects (e.g., rapidly evolving keyhole vapor depressions).
+* **Object Tracking:** Implements YOLOv8 and YOLOv12 architectures trained directly on SAM-generated masks for automated, continuous high-speed tracking of dynamic target objects (e.g., rapidly evolving keyhole vapor depressions during laser powder bed fusion process or movement of tool pin during friction stir welding process).
 
 ### 4. Interactive Geometry Feature Analyser
 * **Geometric Quantification:** Automatically extracts, quantifies, and plots temporal geometric metrics—such as object depth, width, area, and aspect ratio—derived directly from the tracking data.
@@ -64,7 +64,7 @@ Due to large file sizes, the complete dataset, source code package, and tutorial
     * High-speed X-ray image (cine file)
     * High-speed X-ray image (thermal drift correction demo)
     * Labeled mask data for YOLO training
-    * X-ray tomography 2D images (images from APS XSD-IMG group)
+    * X-ray tomography 2D images (images from TomoBank)
     * X-ray tomography 3D image (human head opendata, MSD Cardiac dataset)
 * 📂 **4. Sample Output Files:**
     * CSV file for geometry analysis
@@ -118,7 +118,7 @@ ollama pull llama3
 
 Follow the steps below to launch the software using your preferred IDE.
 
-### [Option A] Using Visual Studio Code (Recommended)
+### [Option A] Using Visual Studio Code
 1. **Open the Project:** Launch VS Code and open the folder `1. Python code`.
 2. **Select Interpreter:** * *Note: Ensure Python is installed prior to this step.*
    * Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac) to open the Command Palette.
