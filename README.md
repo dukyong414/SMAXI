@@ -1,4 +1,4 @@
-![Banner Name](path/to/your/image.png)
+![Banner Name](Github banner.png)
 # SMAXI
 
 **SMAXI (Software for Machine-learning Analysis of X-ray Images): An Open-source, End-to-End, AI-Powered Platform**
