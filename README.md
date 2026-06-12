@@ -1,7 +1,8 @@
+# SMAXI
 <p align="center">
   <img src="Github banner.png" alt="Banner">
 </p>
-# SMAXI
+
 
 **SMAXI (Software for Machine-learning Analysis of X-ray Images): An Open-source, End-to-End, AI-Powered Platform**
 
