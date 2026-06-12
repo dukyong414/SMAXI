@@ -11,11 +11,11 @@ Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department 
 
 ## 📖 Overview
 
-**SMAXI (Software for Machine-learning Analysis of X-ray Images)** is an open-source platform designed to address the "Big Data" bottlenecks inherent in modern full-field X-ray imaging. While advancements in both laboratory-scale x-ray sources and high-energy synchrotron facilities enable rapid, high-resolution data acquisition, the manual processing of these massive, multi-dimensional datasets has become prohibitively tedious.
+**SMAXI (Software for Machine-learning Analysis of X-ray Images)** is an open-source platform designed to address the "Big Data" bottlenecks inherent in modern full-field X-ray imaging. While adva[...]
 
 SMAXI solves this by providing a robust, user-friendly pipeline for processing transient high-speed 2D x-ray video, 3D computed tomography (CT) data, and 4D in-situ tomography.
 
-Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 2, YOLOv12, Llama 3) to automate and accelerate image stabilization, precise object annotation, dynamic tracking, and complex geometric feature analysis.
+Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 2, YOLOv12, Llama 3) t[...]
 
 ## 🖼️ Diagram
 The diagram below summarizes the core architecture and key modules of the SMAXI software.
@@ -29,27 +29,27 @@ The diagram below summarizes the core architecture and key modules of the SMAXI 
 SMAXI is structured into four primary analytical modules, supplemented by advanced auxiliary tools:
 
 ### 1. Image Pre-processor (Image Stabilization & Normalization)
-* **Thermal Drift Correction:** Computer vision-assisted automated stabilization of high-speed x-ray images to track and correct for thermal drift-triggered surface shifts (e.g., substrate's thermal expansion during laser powder bed fusion).
-* **Image Normalization:** Background removal and contrast enhancement designed to resolve vague features and isolate phenomena like keyholes and melt pools. Supports both continuous grayscale and binary normalization, with optional CLAHE illumination flattening.
+* **Thermal Drift Correction:** Computer vision-assisted automated stabilization of high-speed x-ray images to track and correct for thermal drift-triggered surface shifts (e.g., substrate's therm[...]
+* **Image Normalization:** Background removal and contrast enhancement designed to resolve vague features and isolate phenomena like keyholes and melt pools. Supports both continuous grayscale and[...]
 
 ### 2. ML-Powered Object Segmenter
-* **Zero-Shot Detection:** Utilizes foundational **Segment Anything Models (SAM 1 & SAM 2)** for robust, prompt-based 2D, 3D, and 4D object segmentation. This drastically reduces the tedious manual labeling overhead required by traditional polygon methods, replacing it with efficient point-and-click or bounding-box interactions.
+* **Zero-Shot Detection:** Utilizes foundational **Segment Anything Models (SAM 1 & SAM 2)** for robust, prompt-based 2D, 3D, and 4D object segmentation. This drastically reduces the tedious manua[...]
 
 ### 3. ML-Powered Object Tracker
-* **Object Tracking:** Implements YOLOv8 and YOLOv12 architectures trained directly on SAM-generated masks for automated, continuous high-speed tracking of dynamic target objects (e.g., rapidly evolving keyhole vapor depressions during laser powder bed fusion process or movement of tool pin during friction stir welding process).
+* **Object Tracking:** Implements YOLOv8 and YOLOv12 architectures trained directly on SAM-generated masks for automated, continuous high-speed tracking of dynamic target objects (e.g., rapidly ev[...]
 
 ### 4. Interactive Geometry Feature Analyser
-* **Geometric Quantification:** Automatically extracts, quantifies, and plots temporal geometric metrics—such as object depth, width, area, and aspect ratio—derived directly from the tracking data.
-* **LLM Integration:** Automatically extracts, quantifies, and plots temporal geometric metrics—such as object deptFeatures a built-in interactive conversational assistant powered by Llama 3 (via Ollama). Users can seamlessly query their extracted datasets in natural language to quickly retrieve statistical insights and summaries.width, area, and aspect ratio—derived directly from the tracking data.
+* **Geometric Quantification:** Automatically extracts, quantifies, and plots temporal geometric metrics—such as object depth, width, area, and aspect ratio—derived directly from the tracking [...]
+* **LLM Integration:** Automatically extracts, quantifies, and plots temporal geometric metrics—such as object deptFeatures a built-in interactive conversational assistant powered by Llama 3 (vi[...]
 
 ### Auxiliary feature
-* **Transient Event Tagger:** A dedicated interface for manually identifying, tagging, and exporting localized transient events (e.g., spatter, bubble formation, or pore generation) with precise spatial and temporal coordinates.
+* **Transient Event Tagger:** A dedicated interface for manually identifying, tagging, and exporting localized transient events (e.g., spatter, bubble formation, or pore generation) with precise s[...]
 
 ---
 
 ## 📦 Installation Package Explanation
 
-Due to large file sizes, the complete dataset, source code package, and tutorial materials are hosted externally. Python files can be found in the repository. If any modifications are made to Python files in the repository, users can seamlessly replace them with the updated files from the Google Drive below.
+Due to large file sizes, the complete dataset, source code package, and tutorial materials are hosted externally. Python files can be found in the repository. If any modifications are made to Pyth[...]
 
 
 ### 🔗 [Download All Assets Here (Google Drive Link)](https://drive.google.com/drive/folders/1woC6zvyxjAKdQ0fuNuI6pKW8LH5Ltft8?usp=sharing)
@@ -147,7 +147,7 @@ Follow the steps below to launch the software using your preferred IDE.
 Below is the tutorial video (Video does not cover recently-updated featuers, but would assist in installing the software).
 <br />
 
-[![Watch the video](https://img.youtube.com/vi/K2RnguNqBVk/maxresdefault.jpg)](https://youtu.be/K2RnguNqBVk)
+[![Watch the video](https://img.youtube.com/vi/hc3nLJa31L8/maxresdefault.jpg)](https://youtu.be/hc3nLJa31L8?si=mFKIPRUnLYUP1v6e)
 
 
 
