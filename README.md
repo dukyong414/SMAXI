@@ -144,7 +144,7 @@ Follow the steps below to launch the software using your preferred IDE.
 
 <br />
 <br />
-Below is the tutorial video (Video does not cover recently-updated featuers, but would assist in installing the software).
+Below is the tutorial video.
 <br />
 
 [![SMAXI Tutorial Video](https://img.youtube.com/vi/hc3nLJa31L8/maxresdefault.jpg)](https://youtu.be/hc3nLJa31L8)
