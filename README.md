@@ -13,7 +13,7 @@ Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department 
 
 SMAXI solves this by providing a robust, user-friendly pipeline for processing transient high-speed 2D x-ray video, 3D computed tomography (CT) data, and 4D in-situ tomography.
 
-Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 1&2, YOLOv8 & v12, Llama 3) to automate and accelerate image stabilization, precise object annotation, dynamic tracking, and complex geometric feature analysis.
+Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 1 & 2, YOLO v8 & v12, Llama 3) to automate and accelerate image stabilization, precise object annotation, dynamic tracking, and complex geometric feature analysis.
 
 ## 🖼️ Diagram
 The diagram below summarizes the core architecture and key modules of the SMAXI software.
