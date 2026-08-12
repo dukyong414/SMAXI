@@ -1,22 +1,24 @@
-**SMAXI (Software for Machine-learning Analysis of X-ray Images): An Open-source, End-to-End, AI-Powered Platform**
+**SMAXI (Software for Machine-learning Analysis of X-ray Images): An Open-source, End-to-End, AI-Powered Software**
 
 Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department of Mechanical Engineering)  
 [Visit Lab Website](https://fast-am.mech.northwestern.edu/)
 
 <img width="1784" height="487" alt="Logo" src="Logo.png" />
 
+<!-- Video: clickable YouTube thumbnail -->
+[![SMAXI Tutorial Video]([https://img.youtube.com/vi/hc3n](https://youtu.be/sCgA6VVVTUc)
 ---
 
 ## 📖 Overview
 
-**SMAXI (Software for Machine-learning Analysis of X-ray Images)** is an open-source platform designed to address the "Big Data" bottlenecks inherent in modern full-field X-ray imaging. While advancements in both laboratory-scale x-ray sources and high-energy synchrotron facilities enable rapid, high-resolution data acquisition, the manual processing of these massive, multi-dimensional datasets has become prohibitively tedious.
+**SMAXI (Software for Machine-learning Analysis of X-ray Images)** is an open-source software designed to address the "Big Data" bottlenecks inherent in modern full-field X-ray imaging techniques. While advancements in both laboratory-scale x-ray sources and high-energy synchrotron facilities enable rapid, high-resolution data acquisition, the manual processing of these massive and multidimensional datasets has become prohibitively tedious.
 
-SMAXI solves this by providing a robust, user-friendly pipeline for processing transient high-speed 2D x-ray video, 3D computed tomography (CT) data, and 4D in-situ tomography.
+SMAXI solves this by providing a robust, user-friendly software for processing static 2D x-ray image, transient high-speed 2D x-ray video, and 3D computed tomography (CT) data.
 
-Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 1 & 2, YOLO v8 & v12, Llama 3) to automate and accelerate image stabilization, precise object annotation, dynamic tracking, and complex geometric feature analysis.
+Unlike closed-source commercial alternatives that restrict customization, SMAXI is fully extensible and integrates state-of-the-art machine learning foundational models (SAM 1 & 2, YOLO v8 & v12, Llama 3) to automate and accelerate image pre-processing, precise object segmentation, dynamic object tracking, and complex geometric feature analysis.
 
 ## 🖼️ Diagram
-The diagram below summarizes the core architecture and key modules of the SMAXI software.
+The diagram below summarizes the core architecture and key modules of SMAXI.
 
 <img width="1789" height="1091" alt="Graphical abstract" src="Abstract.png" />
 
