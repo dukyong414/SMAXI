@@ -6,8 +6,7 @@ Developed by **FAST-AM Lab**, Northwestern University, Evanston, IL (Department 
 <img width="1784" height="487" alt="Logo" src="Logo.png" />
 
 <!-- Video: clickable YouTube thumbnail -->
-[![SMAXI Tutorial Video]([https://img.youtube.com/vi/hc3n](https://youtu.be/sCgA6VVVTUc)
----
+[![SMAXI Tutorial Video](https://img.youtube.com/vi/sCgA6VVVTUc/maxresdefault.jpg)](https://youtu.be/sCgA6VVVTUc)
 
 ## 📖 Overview
 
