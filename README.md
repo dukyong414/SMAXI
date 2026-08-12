@@ -71,7 +71,7 @@ Due to large file sizes, the complete dataset, source code package, and tutorial
     * Trained YOLO model (`.pt` file)
 * 📚 **Tutorials:**
     * Tutorial Slides (`.pdf` and `.pptx`)
-    * X-ray image analysis program tutorial video (`.mp4` - Recorded Jan 22, 2026)
+    * X-ray image analysis program tutorial video (`.mp4` - Recorded June 11, 2026)
 
 
 ---
