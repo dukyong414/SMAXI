@@ -473,6 +473,14 @@ class SamLabelerApp:
         self.is_ct_mode = False
         
         self._build_base_ui(title="Tool: X-ray Imaging (2D)", color="#3498DB")
+        tk.Button(
+            self.toolbar,
+            text="Propagate frames",
+            command=self.open_propagate_dialog,
+            bg="#148F77",
+            fg="white",
+            font=("Arial", 9, "bold"),
+        ).pack(side="left", padx=4)
         
         # ======================================================================
         # TOOLBAR LAYOUT (CLEAN VERSION)
@@ -680,7 +688,238 @@ class SamLabelerApp:
             self.log(f"Auto AI Failed: {e}", "red")
             print(f"Auto AI Error: {e}")
 
+    def _propagation_seed_mask(self):
+        if self.current_mask is not None and np.any(self.current_mask):
+            return np.asarray(self.current_mask).astype(bool)
+        cid = self.current_class_id.get()
+        if cid < 0 or self.raw_image is None:
+            return None
+        anns = [a for a in self.current_annotations if a.get("id") == cid]
+        if not anns:
+            return None
+        h, w = self.raw_image.shape[:2]
+        return self._annotations_to_mask(anns, h, w).astype(bool)
 
+    def open_propagate_dialog(self):
+        """Optional: carry the current 2D mask across the image sequence."""
+        if getattr(self, "is_ct_mode", False):
+            messagebox.showinfo("Propagate", "Frame propagation is for 2D image sequences.")
+            return
+        if not getattr(self, "image_list", None) or self.raw_image is None:
+            messagebox.showwarning("Propagate", "Load a 2D image sequence first.")
+            return
+        if self.predictor is None:
+            messagebox.showwarning("Propagate", "Load a SAM model first.")
+            return
+        if self.current_class_id.get() < 0:
+            messagebox.showwarning("Propagate", "Select a class (for example Keyhole) before propagating.")
+            return
+        if self._propagation_seed_mask() is None:
+            messagebox.showwarning(
+                "Propagate",
+                "Segment the object on this frame first.\nUse Point, Box, or Poly, then press Propagate frames.",
+            )
+            return
+        if getattr(self, "_propagate_running", False):
+            messagebox.showinfo("Propagate", "Propagation is already running.")
+            return
+
+        dlg = Toplevel(self.frame)
+        dlg.title("Propagate segmentation")
+        dlg.geometry("480x300")
+        dlg.configure(bg="white")
+        dlg.transient(self.frame.winfo_toplevel())
+        tk.Label(
+            dlg,
+            text="Optional. SAM re-segments each neighboring frame\nusing the previous mask as the prompt.",
+            bg="white", justify="left", font=("Arial", 10),
+        ).pack(anchor="w", padx=14, pady=(12, 6))
+        direction = tk.StringVar(value="forward")
+        tk.Radiobutton(dlg, text="Forward (later frames)", variable=direction, value="forward", bg="white").pack(anchor="w", padx=18)
+        tk.Radiobutton(dlg, text="Backward (earlier frames)", variable=direction, value="backward", bg="white").pack(anchor="w", padx=18)
+        tk.Radiobutton(dlg, text="Both directions", variable=direction, value="both", bg="white").pack(anchor="w", padx=18)
+        limit = tk.IntVar(value=0)
+        row = tk.Frame(dlg, bg="white")
+        row.pack(anchor="w", padx=18, pady=8)
+        tk.Label(row, text="Max frames each way (0 = all):", bg="white").pack(side="left")
+        tk.Entry(row, textvariable=limit, width=6).pack(side="left", padx=6)
+        overwrite = tk.BooleanVar(value=False)
+        tk.Checkbutton(
+            dlg, text="Overwrite frames that already have this class", variable=overwrite, bg="white",
+        ).pack(anchor="w", padx=18)
+
+        def go():
+            try:
+                cap = int(limit.get())
+            except (TypeError, ValueError, tk.TclError):
+                cap = 0
+            dlg.destroy()
+            self._start_propagation(direction.get(), max(0, cap), bool(overwrite.get()))
+
+        tk.Button(dlg, text="Propagate", command=go, bg="#148F77", fg="white", font=("Arial", 11, "bold")).pack(
+            fill="x", padx=14, pady=14,
+        )
+
+    def _start_propagation(self, direction, frame_limit, overwrite):
+        seed = self._propagation_seed_mask()
+        if seed is None:
+            return
+        self._propagate_running = True
+        self.log("Propagating segmentation across frames...", "orange")
+        threading.Thread(
+            target=self._propagate_worker,
+            args=(seed, self.current_class_id.get(), self.current_idx, list(self.image_list), direction, frame_limit, overwrite),
+            daemon=True,
+        ).start()
+
+    def _propagate_worker(self, seed, class_id, start_idx, image_list, direction, frame_limit, overwrite):
+        saved = 0
+        stopped = ""
+        try:
+            h, w = seed.shape[:2]
+            self._write_2d_class_mask(image_list[start_idx], class_id, seed, h, w)
+            chains = []
+            if direction in ("forward", "both"):
+                chains.append(list(range(start_idx + 1, len(image_list))))
+            if direction in ("backward", "both"):
+                chains.append(list(range(start_idx - 1, -1, -1)))
+            for indices in chains:
+                if frame_limit > 0:
+                    indices = indices[:frame_limit]
+                prompt = self._prompts_from_mask(seed)
+                if prompt is None:
+                    stopped = "The starting mask is empty."
+                    break
+                for idx in indices:
+                    path = image_list[idx]
+                    existing = self._load_annotations_list_2d(path)
+                    has_class = any(a.get("id") == class_id for a in existing)
+                    bgr = imread_safe(path)
+                    if bgr is None:
+                        stopped = f"Could not read {os.path.basename(path)}"
+                        break
+                    rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+                    hh, ww = rgb.shape[:2]
+                    if has_class and not overwrite:
+                        kept = self._annotations_to_mask(
+                            [a for a in existing if a.get("id") == class_id], hh, ww
+                        ).astype(bool)
+                        nxt = self._prompts_from_mask(kept)
+                        if nxt is not None:
+                            prompt = nxt
+                        continue
+                    box, points, labels = prompt
+                    mask = self._predict_propagated_mask(rgb, box, points, labels)
+                    if mask is None or int(np.count_nonzero(mask)) < 15:
+                        stopped = f"Stopped at {os.path.basename(path)} (mask disappeared)."
+                        break
+                    self._write_2d_class_mask(path, class_id, mask, hh, ww, existing=existing)
+                    saved += 1
+                    nxt = self._prompts_from_mask(mask)
+                    if nxt is None:
+                        stopped = f"Stopped at {os.path.basename(path)} (no prompt left)."
+                        break
+                    prompt = nxt
+                    self.frame.after(0, lambda n=saved: self.log(f"Propagated {n} frame(s)", "orange"))
+        except Exception as e:
+            stopped = str(e)
+            print(f"Propagate error: {e}")
+        finally:
+            self._propagate_running = False
+            msg = f"Propagation saved {saved} new frame(s)."
+            if stopped:
+                msg += f"\n{stopped}"
+
+            def _finish(text=msg):
+                if self.image_list:
+                    self._refresh_2d_file_marks()
+                    self.load_current_image_2d()
+                self.log(text.replace("\n", " "), "green" if saved else "red")
+                messagebox.showinfo("Propagate", text)
+
+            self.frame.after(0, _finish)
+
+    def _prompts_from_mask(self, mask):
+        if mask is None:
+            return None
+        ys, xs = np.where(np.asarray(mask))
+        if xs.size < 15:
+            return None
+        h, w = mask.shape[:2]
+        box = np.array([
+            max(0, int(xs.min()) - 2),
+            max(0, int(ys.min()) - 2),
+            min(w - 1, int(xs.max()) + 2),
+            min(h - 1, int(ys.max()) + 2),
+        ], dtype=np.float32)
+        points = np.array([[float(np.mean(xs)), float(np.mean(ys))]], dtype=np.float32)
+        labels = np.array([1], dtype=np.int32)
+        return box, points, labels
+
+    def _predict_propagated_mask(self, rgb, box, points, labels):
+        self.predictor.set_image(rgb)
+        box = np.asarray(box, dtype=np.float32).reshape(4)
+        try:
+            masks, _, _ = self.predictor.predict(
+                point_coords=points, point_labels=labels, box=box, multimask_output=False,
+            )
+        except Exception:
+            masks, _, _ = self.predictor.predict(
+                point_coords=points, point_labels=labels, box=box.reshape(1, 4), multimask_output=False,
+            )
+        return self.apply_y_limit_constraint(np.asarray(masks[0]).astype(bool))
+
+    def _mask_to_norm_coords(self, mask):
+        m = (np.asarray(mask).astype(np.uint8) * 255)
+        cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not cnts:
+            return None
+        c = max(cnts, key=cv2.contourArea)
+        if cv2.contourArea(c) < 15:
+            return None
+        h, w = mask.shape[:2]
+        return [float(x) for pt in c.reshape(-1, 2) for x in (pt[0] / w, pt[1] / h)]
+
+    def _write_2d_class_mask(self, image_path, class_id, mask, h, w, existing=None):
+        coords = self._mask_to_norm_coords(mask)
+        if coords is None:
+            return False
+        if existing is None:
+            existing = self._load_annotations_list_2d(image_path)
+        anns = [a for a in existing if a.get("id") != class_id]
+        anns.append({"id": int(class_id), "coords": coords})
+        d = os.path.dirname(image_path)
+        stem = os.path.splitext(os.path.basename(image_path))[0]
+        lbl_dir = os.path.join(d, "labels_txt")
+        mask_dir = os.path.join(d, "labels_mask")
+        os.makedirs(lbl_dir, exist_ok=True)
+        os.makedirs(mask_dir, exist_ok=True)
+        with open(os.path.join(lbl_dir, stem + ".txt"), "w", encoding="utf-8") as f:
+            for a in anns:
+                f.write(f"{a['id']} " + " ".join(f"{c:.6f}" for c in a["coords"]) + "\n")
+        canvas = np.zeros((h, w), dtype=np.uint8)
+        for a in anns:
+            pts = np.array(
+                [[int(c * w) if k % 2 == 0 else int(c * h) for k, c in enumerate(a["coords"])]],
+                np.int32,
+            ).reshape((-1, 1, 2))
+            cv2.fillPoly(canvas, [pts], 255)
+        imwrite_safe(os.path.join(mask_dir, stem + "_mask.png"), canvas)
+        return True
+
+    def _refresh_2d_file_marks(self):
+        if not hasattr(self, "file_listbox") or not self.file_listbox.winfo_exists():
+            return
+        self.file_listbox.delete(0, tk.END)
+        for path in self.image_list:
+            base = os.path.splitext(os.path.basename(path))[0]
+            txt_path = os.path.join(os.path.dirname(path), "labels_txt", base + ".txt")
+            if os.path.exists(txt_path):
+                self.file_listbox.insert(tk.END, f"[✓] {os.path.basename(path)}")
+                self.file_listbox.itemconfig(tk.END, {"fg": "green"})
+            else:
+                self.file_listbox.insert(tk.END, f"[  ] {os.path.basename(path)}")
+                self.file_listbox.itemconfig(tk.END, {"fg": "black"})
 
     def _make_ct_left_scroll_area(self, parent):
         """Scrollable host for the tomography tool left sidebar."""

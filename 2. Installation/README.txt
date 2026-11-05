@@ -16,7 +16,8 @@ segmentation (SAM), object detection (YOLO), and LLM-powered data visualization.
 ================================================================================
 2. FILE STRUCTURE (for 1. Root folder)
 ================================================================================
-* 1. Python code/ ..... Contains the source code (main.py, etc.)
+* 1. Python code/ ..... Contains the source code (1_main.py, etc.)
+                   Download this from GitHub. Do not use "Download all" on Google Drive.
 * models/ ............. Contains various SAM model weights (sam_vit_b_01ec64.pth).
 * requirements.txt .... List of required Python libraries.
 
@@ -54,14 +55,14 @@ This software uses Ollama for the local LLM.
    - Press Ctrl+Shift+P (or Cmd+Shift+P).
    - Type "Python: Select Interpreter". 
    - Choose the 'xray_image_software' environment we created above.
-4. Open 'main.py' and press the Play button.
+4. Open '1_main.py' and press the Play button.
 
 [Option B: Using Spyder]
 1. Open the terminal and make sure the environment is active:
    conda activate xray_image_software
 2. Launch Spyder by typing:
    spyder
-3. Open 'main.py' inside Spyder and run it.
+3. Open '1_main.py' inside Spyder and run it.
 
 ================================================================================
 5. TROUBLESHOOTING

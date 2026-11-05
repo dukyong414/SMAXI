@@ -31,6 +31,143 @@ def collect_image_paths(source: str, recursive: bool = True) -> list:
     return natsorted(found)
 
 
+def odd_median_window(window) -> int:
+    try:
+        w = int(window)
+    except (TypeError, ValueError):
+        w = 1
+    if w <= 1:
+        return 1
+    if w % 2 == 0:
+        w += 1
+    return w
+
+
+def temporal_moving_median(frames: np.ndarray, window: int) -> np.ndarray:
+    """Median along time. frames shape is (T, H, W)."""
+    w = odd_median_window(window)
+    if w <= 1 or frames is None or len(frames) == 0:
+        return frames
+    return scipy.ndimage.median_filter(
+        np.asarray(frames, dtype=np.float32),
+        size=(w, 1, 1),
+        mode="nearest",
+    )
+
+
+def collect_cine_paths(folder: str) -> list:
+    if not folder or not os.path.isdir(folder):
+        return []
+    found = [
+        os.path.join(folder, name)
+        for name in os.listdir(folder)
+        if name.lower().endswith(".cine")
+    ]
+    return natsorted(found)
+
+
+def write_gray_video(path: str, frames_u8: np.ndarray, fps: float) -> str:
+    if frames_u8 is None or len(frames_u8) == 0:
+        raise ValueError("No frames to write")
+    h, w = frames_u8.shape[1], frames_u8.shape[2]
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    vw = cv2.VideoWriter(path, cv2.VideoWriter_fourcc(*"mp4v"), max(1.0, float(fps)), (w, h), True)
+    if not vw.isOpened():
+        path = os.path.splitext(path)[0] + ".avi"
+        vw = cv2.VideoWriter(path, cv2.VideoWriter_fourcc(*"XVID"), max(1.0, float(fps)), (w, h), True)
+    for fr in frames_u8:
+        if fr.ndim == 2:
+            fr = cv2.cvtColor(fr, cv2.COLOR_GRAY2BGR)
+        vw.write(fr)
+    vw.release()
+    return path
+
+
+def track_keyhole_sequence(frames_u8, model, csv_path, video_path, label="Keyhole", class_id=0, conf=0.25, fps=30.0):
+    """YOLO track on normalized grayscale frames. Returns (row count, video path)."""
+    if hasattr(model, "predictor"):
+        model.predictor = None
+    h, w = frames_u8.shape[1], frames_u8.shape[2]
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+    os.makedirs(os.path.dirname(video_path), exist_ok=True)
+    vw = cv2.VideoWriter(video_path, cv2.VideoWriter_fourcc(*"mp4v"), max(1.0, float(fps)), (w, h), True)
+    if not vw.isOpened():
+        video_path = os.path.splitext(video_path)[0] + ".avi"
+        vw = cv2.VideoWriter(video_path, cv2.VideoWriter_fourcc(*"XVID"), max(1.0, float(fps)), (w, h), True)
+    locked_id = None
+    written = 0
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "Frame_ID", "Instance_Name", "Track_ID", "YOLO_Class_ID", "YOLO_Model_Name",
+            "Center_X", "Center_Y", "Width", "Height", "Confidence", "Polygon",
+        ])
+        for i, gray in enumerate(frames_u8):
+            bgr = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+            results = model.track(
+                bgr, persist=True, tracker="bytetrack.yaml", verbose=False, conf=float(conf), imgsz=640,
+            )
+            result = results[0]
+            boxes = result.boxes
+            masks = result.masks
+            names = result.names or {}
+            best_i, best_conf = _pick_track_index(boxes, class_id, locked_id)
+            if best_i is not None and locked_id is None and boxes[best_i].id is not None:
+                locked_id = int(boxes[best_i].id[0])
+            elif best_i is None:
+                locked_id = None
+            overlay = bgr.copy()
+            if best_i is None:
+                writer.writerow([i, label, -1, -1, "", "NaN", "NaN", "NaN", "NaN", 0, ""])
+                cv2.putText(overlay, f"{label} (not detected)", (12, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 200, 255), 2, cv2.LINE_AA)
+            else:
+                box = boxes[best_i]
+                x, y, bw, bh = box.xywh[0].tolist()
+                cls = int(box.cls[0])
+                tid = int(box.id[0]) if box.id is not None else -1
+                poly = ""
+                if masks is not None and best_i < len(masks.xy) and len(masks.xy[best_i]) > 0:
+                    poly_pts = np.array(masks.xy[best_i], dtype=np.int32)
+                    poly = str(masks.xy[best_i].tolist())
+                    tint = overlay.copy()
+                    cv2.fillPoly(tint, [poly_pts], (255, 128, 0))
+                    cv2.addWeighted(tint, 0.4, overlay, 0.6, 0, overlay)
+                    cv2.polylines(overlay, [poly_pts], True, (255, 200, 0), 2)
+                x1, y1 = int(max(0, x - bw / 2)), int(max(0, y - bh / 2))
+                x2, y2 = int(min(w, x + bw / 2)), int(min(h, y + bh / 2))
+                cv2.rectangle(overlay, (x1, y1), (x2, y2), (255, 180, 0), 2)
+                cv2.putText(overlay, f"{label} {best_conf:.2f}", (x1, max(20, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
+                writer.writerow([i, label, tid, cls, names.get(cls, str(cls)), x, y, bw, bh, best_conf, poly])
+            vw.write(overlay)
+            written += 1
+    vw.release()
+    return written, video_path
+
+
+def _pick_track_index(boxes, class_id, locked_id):
+    if boxes is None or len(boxes) == 0:
+        return None, -1.0
+
+    def scan(lock):
+        best_i, best_conf = None, -1.0
+        for bi, box in enumerate(boxes):
+            if class_id is not None and int(box.cls[0]) != int(class_id):
+                continue
+            tid = int(box.id[0]) if box.id is not None else -1
+            if lock is not None and tid != lock:
+                continue
+            c = float(box.conf[0])
+            if c > best_conf:
+                best_conf = c
+                best_i = bi
+        return best_i, best_conf
+
+    best_i, best_conf = scan(locked_id)
+    if best_i is None and locked_id is not None:
+        best_i, best_conf = scan(None)
+    return best_i, best_conf
+
+
 def apply_clahe_gray(img_u8: np.ndarray, clip_limit: float, tile_size: int) -> np.ndarray:
     """Contrast Limited Adaptive Histogram Equalization (grayscale uint8)."""
     if img_u8.ndim == 3:
@@ -1079,37 +1216,67 @@ class DualVideoPlayer:
         self.is_playing = True
         self.play_direction = 1 
         self.current_pos = 0
+        self.show_original = tk.BooleanVar(value=True)
+        self._scale_lock = False
+        if self.total_frames <= 0:
+            self.total_frames = int(self.cap_norm.get(cv2.CAP_PROP_FRAME_COUNT))
 
         title_frame = tk.Frame(self.window, bg="#2C3E50")
         title_frame.pack(side="top", fill="x", pady=10)
-        tk.Label(title_frame, text="Original Input", fg="white", bg="#2C3E50", font=("Arial", 16)).pack(side="left", expand=True)
-        tk.Label(title_frame, text="Normalized Output", fg="#F1C40F", bg="#2C3E50", font=("Arial", 16, "bold")).pack(side="right", expand=True)
+        self.lbl_title_orig = tk.Label(title_frame, text="Original Input", fg="white", bg="#2C3E50", font=("Arial", 16))
+        self.lbl_title_orig.pack(side="left", expand=True)
+        self.lbl_title_norm = tk.Label(title_frame, text="Normalized Output", fg="#F1C40F", bg="#2C3E50", font=("Arial", 16, "bold"))
+        self.lbl_title_norm.pack(side="left", expand=True)
         
-        video_frame = tk.Frame(self.window, bg="black")
-        video_frame.pack(expand=True, fill="both", padx=20, pady=10)
-        self.lbl_orig = tk.Label(video_frame, bg="black")
+        self.video_frame = tk.Frame(self.window, bg="black")
+        self.video_frame.pack(expand=True, fill="both", padx=20, pady=10)
+        self.lbl_orig = tk.Label(self.video_frame, bg="black")
         self.lbl_orig.pack(side="left", expand=True, fill="both", padx=5)
-        self.lbl_norm = tk.Label(video_frame, bg="black")
-        self.lbl_norm.pack(side="right", expand=True, fill="both", padx=5)
+        self.lbl_norm = tk.Label(self.video_frame, bg="black")
+        self.lbl_norm.pack(side="left", expand=True, fill="both", padx=5)
         
-        ctrl_frame = tk.Frame(self.window, bg="#34495E", pady=15)
+        ctrl_frame = tk.Frame(self.window, bg="#34495E", pady=8)
         ctrl_frame.pack(side="bottom", fill="x")
-        
-        tk.Label(ctrl_frame, text="Speed:", bg="#34495E", fg="white", font=("Arial", 12)).pack(side="left", padx=10)
-        self.speed_scale = tk.Scale(ctrl_frame, from_=0.1, to=30.0, resolution=0.1, orient="horizontal", length=300, bg="#34495E", fg="white", highlightthickness=0, label="Multiplier")
+
+        step_box = tk.Frame(ctrl_frame, bg="#34495E")
+        step_box.pack(side="top", fill="x", padx=10, pady=(0, 4))
+        tk.Button(step_box, text="◀ Frame", command=lambda: self.step_frame(-1), width=10, bg="#1A5276", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=4)
+        tk.Button(step_box, text="Frame ▶", command=lambda: self.step_frame(1), width=10, bg="#1A5276", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=4)
+        self.lbl_frame = tk.Label(step_box, text="Frame 0", bg="#34495E", fg="white", font=("Arial", 10, "bold"), width=18)
+        self.lbl_frame.pack(side="left", padx=8)
+        self.frame_scale = tk.Scale(
+            step_box, from_=0, to=max(0, self.total_frames - 1), orient="horizontal",
+            length=360, bg="#34495E", fg="white", highlightthickness=0,
+            command=self.on_frame_scale, showvalue=False,
+        )
+        self.frame_scale.pack(side="left", padx=8, fill="x", expand=True)
+        tk.Checkbutton(
+            step_box, text="Show original video", variable=self.show_original, command=self.apply_layout,
+            bg="#34495E", fg="white", selectcolor="#2C3E50",
+            activebackground="#34495E", activeforeground="white", font=("Arial", 10, "bold"),
+        ).pack(side="left", padx=10)
+
+        play_row = tk.Frame(ctrl_frame, bg="#34495E")
+        play_row.pack(side="top", fill="x")
+        tk.Label(play_row, text="Speed:", bg="#34495E", fg="white", font=("Arial", 12)).pack(side="left", padx=10)
+        self.speed_scale = tk.Scale(play_row, from_=0.1, to=30.0, resolution=0.1, orient="horizontal", length=220, bg="#34495E", fg="white", highlightthickness=0)
         self.speed_scale.set(1.0)
         self.speed_scale.pack(side="left", padx=10)
 
-        btn_box = tk.Frame(ctrl_frame, bg="#34495E")
-        btn_box.pack(side="left", padx=30)
+        btn_box = tk.Frame(play_row, bg="#34495E")
+        btn_box.pack(side="left", padx=20)
 
         tk.Button(btn_box, text="◀ Reverse", command=self.play_reverse, width=10, bg="#E74C3C", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=5)
         tk.Button(btn_box, text="⏹ Stop", command=self.stop_reset, width=8, bg="#7F8C8D", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=5)
         self.btn_play = tk.Button(btn_box, text="⏸ Pause", command=self.toggle_play, width=10, bg="#F1C40F", fg="black", font=("Arial", 10, "bold"))
         self.btn_play.pack(side="left", padx=5)
         tk.Button(btn_box, text="Forward ▶", command=self.play_forward, width=10, bg="#2ECC71", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=5)
-        tk.Button(ctrl_frame, text="Close", command=self.close, bg="black", fg="white", font=("Arial", 10, "bold")).pack(side="right", padx=20)
-        
+        tk.Button(play_row, text="Close", command=self.close, bg="black", fg="white", font=("Arial", 10, "bold")).pack(side="right", padx=20)
+
+        self.window.bind("<Left>", lambda _e: self.step_frame(-1))
+        self.window.bind("<Right>", lambda _e: self.step_frame(1))
+        self.window.protocol("WM_DELETE_WINDOW", self.close)
+        self.seek_and_show(0)
         self.update_frame()
 
     def toggle_play(self):
@@ -1134,53 +1301,205 @@ class DualVideoPlayer:
         self.btn_play.config(text="▶ Play", bg="#27AE60")
         self.seek_and_show(0)
 
+    def step_frame(self, delta):
+        if self.total_frames <= 0:
+            return
+        self.is_playing = False
+        self.btn_play.config(text="▶ Play", bg="#27AE60")
+        self.current_pos = (self.current_pos + int(delta)) % self.total_frames
+        self.seek_and_show(self.current_pos)
+
+    def on_frame_scale(self, val):
+        if self._scale_lock or self.total_frames <= 0:
+            return
+        self.is_playing = False
+        self.btn_play.config(text="▶ Play", bg="#27AE60")
+        self.current_pos = max(0, min(int(float(val)), self.total_frames - 1))
+        self.seek_and_show(self.current_pos)
+
+    def apply_layout(self):
+        self.lbl_orig.pack_forget()
+        self.lbl_norm.pack_forget()
+        self.lbl_title_orig.pack_forget()
+        self.lbl_title_norm.pack_forget()
+        if self.show_original.get():
+            self.lbl_title_orig.pack(side="left", expand=True)
+            self.lbl_title_norm.pack(side="left", expand=True)
+            self.lbl_orig.pack(side="left", expand=True, fill="both", padx=5)
+            self.lbl_norm.pack(side="left", expand=True, fill="both", padx=5)
+        else:
+            self.lbl_title_norm.pack(side="left", expand=True)
+            self.lbl_norm.pack(side="left", expand=True, fill="both", padx=5)
+        self.seek_and_show(self.current_pos)
+
+    def _set_scale(self, frame_idx):
+        self._scale_lock = True
+        try:
+            self.frame_scale.set(frame_idx)
+        finally:
+            self._scale_lock = False
+        self.lbl_frame.config(text=f"Frame {frame_idx + 1} / {max(1, self.total_frames)}")
+
     def seek_and_show(self, frame_idx):
-        self.cap_orig.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
-        self.cap_norm.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
-        ret1, frame1 = self.cap_orig.read()
-        ret2, frame2 = self.cap_norm.read()
-        if ret1 and ret2: self.display(frame1, frame2)
+        if self.total_frames <= 0:
+            return
+        frame_idx = max(0, min(int(frame_idx), self.total_frames - 1))
+        self.current_pos = frame_idx
+        self._set_scale(frame_idx)
+        frame1 = frame2 = None
+        if self.show_original.get() and self.cap_orig.isOpened():
+            self.cap_orig.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+            ok1, frame1 = self.cap_orig.read()
+            if not ok1:
+                frame1 = None
+        if self.cap_norm.isOpened():
+            self.cap_norm.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+            ok2, frame2 = self.cap_norm.read()
+            if not ok2:
+                frame2 = None
+        if frame2 is not None:
+            self.display(frame1, frame2)
 
     def update_frame(self):
-        if not self.is_playing: return
+        if not self.window.winfo_exists() or not self.is_playing:
+            return
         speed = self.speed_scale.get()
         step = int(speed) if speed >= 1.0 else 1
-        
         next_pos = self.current_pos + (step * self.play_direction)
-        if next_pos >= self.total_frames: next_pos = 0
-        elif next_pos < 0: next_pos = self.total_frames - 1
-            
-        self.current_pos = next_pos
-        self.cap_orig.set(cv2.CAP_PROP_POS_FRAMES, self.current_pos)
-        self.cap_norm.set(cv2.CAP_PROP_POS_FRAMES, self.current_pos)
-        
-        ret1, frame1 = self.cap_orig.read()
-        ret2, frame2 = self.cap_norm.read()
-        
-        if ret1 and ret2: self.display(frame1, frame2)
-        
-        delay = self.base_delay
-        if speed < 1.0: delay = int(self.base_delay / speed)
+        if next_pos >= self.total_frames:
+            next_pos = 0
+        elif next_pos < 0:
+            next_pos = self.total_frames - 1
+        self.seek_and_show(next_pos)
+        delay = self.base_delay if speed >= 1.0 else int(self.base_delay / speed)
         self.window.after(delay, self.update_frame)
 
     def display(self, frame1, frame2):
         screen_w = self.window.winfo_width()
-        disp_w = int((screen_w / 2) - 40)
-        if disp_w < 100: disp_w = 600
-        h, w = frame1.shape[:2]
-        scale = disp_w / w
-        disp_h = int(h * scale)
-        
-        img1 = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(cv2.resize(frame1, (disp_w, disp_h)), cv2.COLOR_BGR2RGB)))
-        img2 = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(cv2.resize(frame2, (disp_w, disp_h)), cv2.COLOR_BGR2RGB)))
-        self.lbl_orig.configure(image=img1); self.lbl_orig.image = img1
-        self.lbl_norm.configure(image=img2); self.lbl_norm.image = img2
+        panels = 2 if (self.show_original.get() and frame1 is not None) else 1
+        disp_w = int((screen_w / panels) - 40)
+        if disp_w < 100:
+            disp_w = 600
+        ref = frame2 if frame2 is not None else frame1
+        h, w = ref.shape[:2]
+        scale = disp_w / max(w, 1)
+        disp_h = max(1, int(h * scale))
+
+        def _photo(frame):
+            resized = cv2.resize(frame, (disp_w, disp_h))
+            return ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)))
+
+        if self.show_original.get() and frame1 is not None:
+            img1 = _photo(frame1)
+            self.lbl_orig.configure(image=img1)
+            self.lbl_orig.image = img1
+        if frame2 is not None:
+            img2 = _photo(frame2)
+            self.lbl_norm.configure(image=img2)
+            self.lbl_norm.image = img2
 
     def close(self):
         self.is_playing = False
         self.cap_orig.release()
         self.cap_norm.release()
         self.window.destroy()
+
+class NormPreviewPopup:
+    """Large comparison window for the loaded sequence."""
+
+    def __init__(self, app):
+        self.app = app
+        self.window = Toplevel(app.frame)
+        self.window.title("Normalization preview")
+        self.window.geometry("1200x820")
+        try:
+            self.window.state("zoomed")
+        except tk.TclError:
+            pass
+        self.window.configure(bg="#1C2833")
+        self.show_original = tk.BooleanVar(value=True)
+        self._scale_lock = False
+
+        title = tk.Frame(self.window, bg="#1C2833")
+        title.pack(fill="x", pady=8)
+        self.lbl_title_orig = tk.Label(title, text="Original", fg="white", bg="#1C2833", font=("Arial", 14, "bold"))
+        self.lbl_title_orig.pack(side="left", expand=True)
+        self.lbl_title_norm = tk.Label(title, text="Normalized", fg="#F1C40F", bg="#1C2833", font=("Arial", 14, "bold"))
+        self.lbl_title_norm.pack(side="left", expand=True)
+
+        body = tk.Frame(self.window, bg="black")
+        body.pack(fill="both", expand=True, padx=12, pady=6)
+        self.lbl_orig = tk.Label(body, bg="black")
+        self.lbl_orig.pack(side="left", expand=True, fill="both", padx=4)
+        self.lbl_norm = tk.Label(body, bg="black")
+        self.lbl_norm.pack(side="left", expand=True, fill="both", padx=4)
+
+        ctrl = tk.Frame(self.window, bg="#34495E", pady=8)
+        ctrl.pack(fill="x")
+        tk.Button(ctrl, text="◀ Frame", command=lambda: self.step(-1), bg="#1A5276", fg="white", font=("Arial", 10, "bold"), width=10).pack(side="left", padx=8)
+        tk.Button(ctrl, text="Frame ▶", command=lambda: self.step(1), bg="#1A5276", fg="white", font=("Arial", 10, "bold"), width=10).pack(side="left", padx=4)
+        total = max(0, app.file_listbox.size() - 1)
+        self.frame_scale = tk.Scale(
+            ctrl, from_=0, to=total, orient="horizontal", length=420,
+            bg="#34495E", fg="white", highlightthickness=0, showvalue=False, command=self.on_scale,
+        )
+        self.frame_scale.pack(side="left", padx=8, fill="x", expand=True)
+        self.lbl_frame = tk.Label(ctrl, text="", bg="#34495E", fg="white", font=("Arial", 10, "bold"), width=16)
+        self.lbl_frame.pack(side="left", padx=6)
+        tk.Checkbutton(
+            ctrl, text="Show original video", variable=self.show_original, command=self.refresh,
+            bg="#34495E", fg="white", selectcolor="#2C3E50",
+            activebackground="#34495E", activeforeground="white", font=("Arial", 10, "bold"),
+        ).pack(side="left", padx=8)
+        tk.Button(ctrl, text="Close", command=self.window.destroy, bg="black", fg="white").pack(side="right", padx=10)
+        self.window.bind("<Left>", lambda _e: self.step(-1))
+        self.window.bind("<Right>", lambda _e: self.step(1))
+        self.refresh()
+
+    def step(self, delta):
+        total = self.app.file_listbox.size()
+        if total <= 0:
+            return
+        idx = max(0, min(self.app.preview_frame_idx.get() + int(delta), total - 1))
+        self.app.preview_frame_idx.set(idx)
+        self.refresh()
+
+    def on_scale(self, val):
+        if self._scale_lock:
+            return
+        self.app.preview_frame_idx.set(int(float(val)))
+        self.refresh()
+
+    def refresh(self):
+        self.app.generate_preview()
+        idx = self.app.preview_frame_idx.get()
+        total = max(1, self.app.file_listbox.size())
+        self._scale_lock = True
+        try:
+            self.frame_scale.config(to=max(0, total - 1))
+            self.frame_scale.set(idx)
+        finally:
+            self._scale_lock = False
+        self.lbl_frame.config(text=f"Frame {idx + 1} / {total}")
+        self.lbl_orig.pack_forget()
+        self.lbl_norm.pack_forget()
+        self.lbl_title_orig.pack_forget()
+        self.lbl_title_norm.pack_forget()
+        show_orig = self.show_original.get()
+        width = 700 if show_orig else 1100
+        raw = self.app.current_preview_raw
+        if show_orig:
+            self.lbl_title_orig.pack(side="left", expand=True)
+            self.lbl_title_norm.pack(side="left", expand=True)
+            self.lbl_orig.pack(side="left", expand=True, fill="both", padx=4)
+            if raw is not None:
+                self.app.show_on_label(self.lbl_orig, self.app.apply_visuals(raw), max_width=width)
+        else:
+            self.lbl_title_norm.pack(side="left", expand=True)
+        self.lbl_norm.pack(side="left", expand=True, fill="both", padx=4)
+        if raw is not None:
+            self.app._render_norm_preview(raw, self.app.current_preview_bg, label=self.lbl_norm, max_width=width)
+
 
 # ==============================================================================
 # NORMALIZER APP 
@@ -1204,7 +1523,8 @@ class NormalizerApp:
         self.bg_start_frame = tk.IntVar(value=0)
         self.bg_frames = tk.IntVar(value=10)
         self.start_after_bg = tk.BooleanVar(value=True)
-        self.window_size = tk.IntVar(value=1)
+        self.window_size = tk.IntVar(value=5)
+        self.use_moving_median = tk.BooleanVar(value=False)
         self.fps = tk.DoubleVar(value=30.0)
         self.use_gpu = tk.BooleanVar(value=utils.HAS_GPU_NORMALIZER)
         self.use_flatfield = tk.BooleanVar(value=False)
@@ -1249,6 +1569,9 @@ class NormalizerApp:
         self.is_mraw_mode = False
         self.cine_video = None
         self.image_files = []
+        self.last_orig_video = None
+        self.last_norm_video = None
+        self._scale_lock = False
         self.mraw_rows = 0
         self.mraw_cols = 0
         self.mraw_frame_bytes = 0
@@ -1413,8 +1736,13 @@ class NormalizerApp:
         tk.Label(f_norm, text="Bg Frame Count:").grid(row=4, column=0, padx=5, sticky="w")
         tk.Entry(f_norm, textvariable=self.bg_frames, width=6).grid(row=4, column=1, sticky="w")
         
-        tk.Label(f_norm, text="Temp Window:").grid(row=4, column=2, padx=5, sticky="w")
+        tk.Label(f_norm, text="Median window:").grid(row=4, column=2, padx=5, sticky="w")
         tk.Entry(f_norm, textvariable=self.window_size, width=6).grid(row=4, column=3, sticky="w")
+        tk.Checkbutton(
+            f_norm,
+            text="Moving median (temporal) before normalization",
+            variable=self.use_moving_median,
+        ).grid(row=11, column=0, columnspan=4, padx=5, sticky="w", pady=(6, 2))
 
         tk.Label(
             f_norm,
@@ -1543,6 +1871,22 @@ class NormalizerApp:
         
         self.btn_run = tk.Button(left_col, text="▶ START PROCESSING", bg="#16A085", fg="white", font=("Arial", 12, "bold"), height=2, command=self.start_processing)
         self.btn_run.pack(fill="x", pady=10)
+        win_row = tk.Frame(left_col)
+        win_row.pack(fill="x", pady=(0, 4))
+        tk.Button(
+            win_row, text="Open preview window", command=self.open_preview_window,
+            bg="#1A5276", fg="white", font=("Arial", 9, "bold"),
+        ).pack(side="left", expand=True, fill="x", padx=(0, 4))
+        tk.Button(
+            win_row, text="Open result window", command=self.open_result_window,
+            bg="#6C3483", fg="white", font=("Arial", 9, "bold"),
+        ).pack(side="left", expand=True, fill="x", padx=(4, 0))
+        tk.Button(
+            left_col,
+            text="Batch CINE folder: normalize → keyhole track",
+            command=self.open_batch_dialog,
+            bg="#1E8449", fg="white", font=("Arial", 10, "bold"), height=2,
+        ).pack(fill="x", pady=(0, 8))
         
         self.log_area = scrolledtext.ScrolledText(left_col, height=6, bg="#F4F6F6", font=("Consolas", 9))
         self.log_area.pack(fill="both", expand=True)
@@ -1551,21 +1895,23 @@ class NormalizerApp:
         f_prev_ctrl = tk.Frame(right_col, bg="#D5D8DC", pady=5)
         f_prev_ctrl.pack(fill="x")
         
-        tk.Button(f_prev_ctrl, text="◀", command=self.prev_frame, bg="#34495E", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=(10, 2))
+        tk.Button(f_prev_ctrl, text="◀ Frame", command=self.prev_frame, bg="#34495E", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=(10, 2))
         
         tk.Label(f_prev_ctrl, text="Frame:", bg="#D5D8DC", font=("Arial", 10, "bold")).pack(side="left", padx=5)
-        # Allow pressing Enter in the frame box to jump
         self.ent_frame_idx = tk.Entry(f_prev_ctrl, textvariable=self.preview_frame_idx, width=8)
         self.ent_frame_idx.pack(side="left")
         self.ent_frame_idx.bind('<Return>', lambda e: self.generate_preview()) 
         
-        tk.Button(f_prev_ctrl, text="▶", command=self.next_frame, bg="#34495E", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=(2, 10))
-        
-        tk.Label(f_prev_ctrl, text="Frame Index:", bg="#D5D8DC", font=("Arial", 10, "bold")).pack(side="left", padx=10)
-        tk.Entry(f_prev_ctrl, textvariable=self.preview_frame_idx, width=8).pack(side="left")
+        tk.Button(f_prev_ctrl, text="Frame ▶", command=self.next_frame, bg="#34495E", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=(2, 6))
+        self.frame_scale = tk.Scale(
+            f_prev_ctrl, from_=0, to=0, orient="horizontal", length=160, showvalue=False,
+            bg="#D5D8DC", highlightthickness=0, command=self._on_preview_scale,
+        )
+        self.frame_scale.pack(side="left", padx=4)
         tk.Button(f_prev_ctrl, text="Show", command=lambda: self.generate_preview(random_pick=False), bg="#2ECC71", fg="white").pack(side="left", padx=5)
-        tk.Label(f_prev_ctrl, text="|", bg="#D5D8DC").pack(side="left", padx=5)
-        tk.Button(f_prev_ctrl, text="🎲 Random", command=lambda: self.generate_preview(random_pick=True), bg="#8E44AD", fg="white").pack(side="left", padx=5)
+        tk.Button(f_prev_ctrl, text="Random", command=lambda: self.generate_preview(random_pick=True), bg="#8E44AD", fg="white").pack(side="left", padx=5)
+        f_prev_ctrl.bind("<Left>", lambda _e: self.prev_frame())
+        f_prev_ctrl.bind("<Right>", lambda _e: self.next_frame())
         
         self.lbl_status_monitor = tk.Label(f_prev_ctrl, text="Ready", bg="#D5D8DC")
         self.lbl_status_monitor.pack(side="right", padx=10)
@@ -1892,11 +2238,12 @@ class NormalizerApp:
         u8 = np.clip((img - low) / (high - low) * 255.0, 0, 255).astype(np.uint8)
         return self._apply_norm_clahe(u8)
 
-    def _render_norm_preview(self, target_raw, bg):
+    def _render_norm_preview(self, target_raw, bg, label=None, max_width=500):
         # Flat-field already removes background — skip grey-scale temporal normalization.
+        label = self.lbl_preview_norm if label is None else label
         if self._using_flatfield():
             res = self._flat_corrected_to_u8(target_raw)
-            self.show_on_label(self.lbl_preview_norm, res)
+            self.show_on_label(label, res, max_width=max_width)
             return
 
         target_blur = cv2.GaussianBlur(target_raw, (3, 3), 0)
@@ -1914,7 +2261,7 @@ class NormalizerApp:
             res = (mask * 255).astype(np.uint8)
 
         res = self._apply_norm_clahe(res)
-        self.show_on_label(self.lbl_preview_norm, res)
+        self.show_on_label(label, res, max_width=max_width)
 
     def apply_norm_preview(self):
         inp = self.input_path.get().strip()
@@ -2413,13 +2760,18 @@ class NormalizerApp:
                 if bg is None:
                     return
 
-            target_raw = self._read_frame_raw(idx, inp)
+            if self.use_moving_median.get():
+                target_raw = self._temporal_median_frame(idx, inp)
+            else:
+                target_raw = self._read_frame_raw(idx, inp)
+                if target_raw is not None:
+                    target_raw = self._prepare_frame(target_raw)
             if target_raw is None:
                 return
-            target_raw = self._prepare_frame(target_raw)
 
             if not from_listbox:
                 self.sync_listbox()
+            self._sync_frame_scale(idx, total_frames)
             
             self.current_preview_raw = target_raw
             self.current_preview_bg = bg
@@ -2429,16 +2781,83 @@ class NormalizerApp:
 
         except Exception as e: print(f"Preview Error: {e}")
 
-    def show_on_label(self, label, img_array):
-        h, w = img_array.shape
-        disp_w = 500
-        scale = disp_w / w
-        disp_h = int(h * scale)
+    def show_on_label(self, label, img_array, max_width=500):
+        h, w = img_array.shape[:2]
+        disp_w = int(max_width)
+        scale = disp_w / max(w, 1)
+        disp_h = max(1, int(h * scale))
         resized = cv2.resize(img_array, (disp_w, disp_h))
-        pil_img = Image.fromarray(resized)
+        if resized.ndim == 2:
+            pil_img = Image.fromarray(resized)
+        else:
+            pil_img = Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
         tk_img = ImageTk.PhotoImage(pil_img)
         label.config(image=tk_img, width=disp_w, height=disp_h)
         label.image = tk_img
+
+    def _on_preview_scale(self, val):
+        if self._scale_lock:
+            return
+        self.preview_frame_idx.set(int(float(val)))
+        self.generate_preview()
+
+    def _sync_frame_scale(self, idx, total):
+        if not hasattr(self, "frame_scale"):
+            return
+        self._scale_lock = True
+        try:
+            self.frame_scale.config(to=max(0, total - 1))
+            self.frame_scale.set(idx)
+        finally:
+            self._scale_lock = False
+
+    def _temporal_median_frame(self, idx, inp=None):
+        window = odd_median_window(self.window_size.get())
+        total = self.file_listbox.size()
+        if window <= 1 or total <= 0:
+            raw = self._read_frame_raw(idx, inp)
+            return self._prepare_frame(raw) if raw is not None else None
+        half = window // 2
+        stack = []
+        for j in range(int(idx) - half, int(idx) + half + 1):
+            jj = min(max(j, 0), total - 1)
+            fr = self._read_frame_raw(jj, inp)
+            fr = self._prepare_frame(fr)
+            if fr is not None:
+                stack.append(np.asarray(fr, dtype=np.float32))
+        if not stack:
+            return None
+        if len(stack) == 1:
+            return stack[0]
+        return np.median(np.stack(stack, axis=0), axis=0).astype(np.float32)
+
+    def open_preview_window(self):
+        if self.file_listbox.size() <= 0:
+            messagebox.showinfo("Preview window", "Load a CINE, MRAW, or image folder first.")
+            return
+        NormPreviewPopup(self)
+
+    def open_result_window(self):
+        orig, norm = self._result_video_paths()
+        if not orig or not norm or not os.path.exists(orig) or not os.path.exists(norm):
+            messagebox.showinfo(
+                "Result window",
+                "No result videos found.\n\nRun processing first, or set the output folder to one that already contains Original_Video and Normalized_Video.",
+            )
+            return
+        DualVideoPlayer(self.frame, str(orig), str(norm), self.fps.get())
+
+    def _result_video_paths(self):
+        if self.last_orig_video and self.last_norm_video:
+            if os.path.exists(self.last_orig_video) and os.path.exists(self.last_norm_video):
+                return self.last_orig_video, self.last_norm_video
+        out = self.output_path.get().strip()
+        vname = self.video_name.get().strip()
+        if not out or not vname:
+            return None, None
+        orig = os.path.join(os.path.abspath(out), "Original_Video", "Original_" + vname)
+        norm = os.path.join(os.path.abspath(out), "Normalized_Video", vname)
+        return orig, norm
 
     def start_processing(self):
         if self.is_running: return
@@ -2549,6 +2968,11 @@ class NormalizerApp:
                 self.log("Error: Could not read any frames from disk.")
                 return
             frames_cpu = np.array(raw_data)
+            if self.use_moving_median.get():
+                med_w = odd_median_window(self.window_size.get())
+                if med_w > 1:
+                    self.log(f"Applying moving median (window={med_w})...")
+                    frames_cpu = temporal_moving_median(frames_cpu, med_w)
 
             bg_cpu = None
             if not skip_grey_norm:
@@ -2655,7 +3079,8 @@ class NormalizerApp:
             
             self.log("Done!")
             self.lbl_status_monitor.config(text="Complete")
-            
+            self.last_orig_video = str(orig_path)
+            self.last_norm_video = str(norm_path)
 
             def open_player():
                 try:
@@ -2670,3 +3095,199 @@ class NormalizerApp:
         finally:
             self.is_running = False
             self.frame.after(0, lambda: self.btn_run.config(state='normal', text="▶ START PROCESSING", bg="#16A085"))
+
+    def _stack_to_norm_u8(self, frames):
+        """Normalize a prepared float stack (T,H,W) with the current settings."""
+        frames = np.asarray(frames, dtype=np.float32)
+        if self.use_moving_median.get():
+            frames = temporal_moving_median(frames, self.window_size.get())
+        if self._using_flatfield():
+            return np.stack([self._flat_corrected_to_u8(fr) for fr in frames])
+        total = len(frames)
+        bg_start, bg_end = self._bg_index_range(total)
+        start, end = self._process_index_range(total)
+        if start >= end:
+            start, end = 0, total
+        bg = np.mean(frames[bg_start:bg_end], axis=0).astype(np.float32)
+        mode = self.norm_mode.get()
+        if mode == "binary":
+            bg = scipy.ndimage.gaussian_filter(bg, 1.0)
+        bg_mean = float(np.mean(bg))
+        min_r = float(self.min_ratio.get())
+        max_r = float(self.max_ratio.get())
+        scale = 255.0 / max(max_r - min_r, 1e-6)
+        thresh = float(self.binary_thresh.get())
+        chosen = frames[start:end]
+        out = np.empty(chosen.shape, dtype=np.uint8)
+        for i, curr in enumerate(chosen):
+            if mode == "binary":
+                curr = scipy.ndimage.gaussian_filter(curr, 1.0)
+            norm = (curr * (bg_mean / (float(np.mean(curr)) + 1e-6))) / (bg + 1e-6)
+            if mode == "grey":
+                res = np.clip(norm, min_r, max_r)
+                res = ((res - min_r) * scale).astype(np.uint8)
+            else:
+                res = ((np.abs(norm - 1.0) > thresh) * 255).astype(np.uint8)
+            out[i] = self._apply_norm_clahe(res)
+        return out
+
+    def open_batch_dialog(self):
+        if self.is_running:
+            messagebox.showinfo("Batch", "Wait until the current job finishes.")
+            return
+        dlg = Toplevel(self.frame)
+        dlg.title("Batch normalize and track keyhole")
+        dlg.geometry("680x390")
+        dlg.configure(bg="white")
+        dlg.transient(self.frame.winfo_toplevel())
+        cine_dir = tk.StringVar()
+        out_dir = tk.StringVar(value=self.output_path.get())
+        weights = tk.StringVar()
+        inst_name = tk.StringVar(value="Keyhole")
+        class_id = tk.StringVar(value="0")
+        conf = tk.DoubleVar(value=0.25)
+
+        def row(r, label, var, browse):
+            tk.Label(dlg, text=label, bg="white", anchor="w").grid(row=r, column=0, sticky="w", padx=10, pady=6)
+            tk.Entry(dlg, textvariable=var, width=52).grid(row=r, column=1, sticky="ew", padx=4)
+            tk.Button(dlg, text="Browse", command=browse).grid(row=r, column=2, padx=8)
+
+        def browse_dir(var, title):
+            path = filedialog.askdirectory(title=title, parent=dlg)
+            if path:
+                var.set(path)
+
+        def browse_weights():
+            path = filedialog.askopenfilename(
+                title="YOLO keyhole weights", parent=dlg,
+                filetypes=[("YOLO weights", "*.pt"), ("All files", "*.*")],
+            )
+            if path:
+                weights.set(path)
+
+        row(0, "CINE folder", cine_dir, lambda: browse_dir(cine_dir, "Folder of .cine files"))
+        row(1, "Output folder", out_dir, lambda: browse_dir(out_dir, "Output folder"))
+        row(2, "YOLO weights", weights, browse_weights)
+        tk.Label(dlg, text="Object name", bg="white").grid(row=3, column=0, sticky="w", padx=10, pady=6)
+        tk.Entry(dlg, textvariable=inst_name, width=20).grid(row=3, column=1, sticky="w", padx=4)
+        tk.Label(dlg, text="Class ID", bg="white").grid(row=4, column=0, sticky="w", padx=10)
+        tk.Entry(dlg, textvariable=class_id, width=8).grid(row=4, column=1, sticky="w", padx=4)
+        tk.Label(dlg, text="Min confidence", bg="white").grid(row=5, column=0, sticky="w", padx=10, pady=6)
+        tk.Entry(dlg, textvariable=conf, width=8).grid(row=5, column=1, sticky="w", padx=4)
+        tk.Label(
+            dlg,
+            text="Each .cine is normalized with the settings on the left (including moving median),\nthen tracked with the YOLO weights. Class 0 is the usual keyhole class.",
+            bg="white", fg="#1A5276", justify="left",
+        ).grid(row=6, column=0, columnspan=3, sticky="w", padx=10, pady=8)
+
+        def start():
+            folder = cine_dir.get().strip()
+            dest = out_dir.get().strip()
+            wt = weights.get().strip()
+            if not folder or not os.path.isdir(folder):
+                messagebox.showwarning("Batch", "Choose a folder that contains .cine files.", parent=dlg)
+                return
+            if not dest:
+                messagebox.showwarning("Batch", "Choose an output folder.", parent=dlg)
+                return
+            if not wt or not os.path.isfile(wt):
+                messagebox.showwarning("Batch", "Choose a YOLO .pt weights file.", parent=dlg)
+                return
+            cines = collect_cine_paths(folder)
+            if not cines:
+                messagebox.showwarning("Batch", "No .cine files in that folder.", parent=dlg)
+                return
+            try:
+                cid = int(class_id.get().strip())
+            except ValueError:
+                messagebox.showwarning("Batch", "Class ID must be an integer (0 for keyhole).", parent=dlg)
+                return
+            job = {
+                "cines": cines,
+                "dest": os.path.abspath(dest),
+                "weights": wt,
+                "name": inst_name.get().strip() or "Keyhole",
+                "class_id": cid,
+                "conf": float(conf.get()),
+                "fps": float(self.fps.get()),
+            }
+            dlg.destroy()
+            self.output_path.set(job["dest"])
+            self.is_running = True
+            self.btn_run.config(state="disabled", text="Batch running...", bg="gray")
+            threading.Thread(target=self._run_batch, args=(job,), daemon=True).start()
+
+        tk.Button(dlg, text="Start batch", command=start, bg="#1E8449", fg="white", font=("Arial", 11, "bold")).grid(
+            row=7, column=0, columnspan=3, sticky="ew", padx=10, pady=12,
+        )
+        dlg.columnconfigure(1, weight=1)
+
+    def _run_batch(self, job):
+        try:
+            from ultralytics import YOLO
+        except ImportError:
+            self.log("Batch stopped: ultralytics is not installed.")
+            self.frame.after(0, lambda: messagebox.showerror("Batch", "Ultralytics is not installed.\nRun: pip install -U ultralytics"))
+            self._batch_finished()
+            return
+        try:
+            if pims is None:
+                raise RuntimeError("pims is not installed, so .cine files cannot be opened.")
+            self.log(f"Loading YOLO weights: {os.path.basename(job['weights'])}")
+            model = YOLO(job["weights"])
+            os.makedirs(job["dest"], exist_ok=True)
+            for n, cine_path in enumerate(job["cines"], start=1):
+                stem = os.path.splitext(os.path.basename(cine_path))[0]
+                case_dir = os.path.join(job["dest"], stem)
+                self.log(f"[{n}/{len(job['cines'])}] {stem}")
+                self.lbl_status_monitor.config(text=f"Batch {n}/{len(job['cines'])}: {stem}")
+                video = pims.open(cine_path)
+                try:
+                    raw = []
+                    for i in range(len(video)):
+                        fr = self._prepare_frame(np.asarray(video[i], dtype=np.float32))
+                        if fr is not None:
+                            raw.append(fr)
+                finally:
+                    try:
+                        video.close()
+                    except Exception:
+                        pass
+                if not raw:
+                    self.log(f"  Skipped (no frames): {stem}")
+                    continue
+                norm = self._stack_to_norm_u8(np.stack(raw, axis=0))
+                img_dir = os.path.join(case_dir, "Normalized_Images")
+                os.makedirs(img_dir, exist_ok=True)
+                for i, fr in enumerate(norm):
+                    self._safe_imwrite(os.path.join(img_dir, f"Img{i:06d}.png"), fr)
+                norm_video = write_gray_video(
+                    os.path.join(case_dir, "Normalized_Video", f"{stem}_normalized.mp4"),
+                    norm, job["fps"],
+                )
+                csv_path = os.path.join(case_dir, "Keyhole_Tracking", f"{stem}_keyhole_tracking.csv")
+                track_video = os.path.join(case_dir, "Keyhole_Tracking", f"{stem}_keyhole_tracking.mp4")
+                count, track_video = track_keyhole_sequence(
+                    norm, model, csv_path, track_video,
+                    label=job["name"], class_id=job["class_id"], conf=job["conf"], fps=job["fps"],
+                )
+                self.log(f"  Normalized video: {norm_video}")
+                self.log(f"  Tracking CSV: {csv_path}")
+                self.log(f"  Tracking video: {track_video} ({count} frames)")
+            self.log("Batch finished.")
+            self.lbl_status_monitor.config(text="Batch complete")
+            dest = job["dest"]
+            n_cines = len(job["cines"])
+            self.frame.after(0, lambda: messagebox.showinfo("Batch complete", f"Finished {n_cines} CINE file(s).\n\n{dest}"))
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            err = str(e)
+            self.log(f"Batch error: {err}")
+            self.frame.after(0, lambda msg=err: messagebox.showerror("Batch error", msg))
+        finally:
+            self._batch_finished()
+
+    def _batch_finished(self):
+        self.is_running = False
+        self.frame.after(0, lambda: self.btn_run.config(state="normal", text="▶ START PROCESSING", bg="#16A085"))

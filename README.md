@@ -29,31 +29,53 @@ SMAXI is structured into four primary analytical modules, supplemented by advanc
 
 ### 1. Image Pre-processor (Image Stabilization & Normalization)
 * **Thermal Drift Correction:** Computer vision-assisted automated stabilization of high-speed x-ray images to track and correct for thermal drift-triggered surface shifts (e.g., substrate's thermal expansion during laser powder bed fusion).
-* **Image Normalization:** Background removal and contrast enhancement designed to resolve vague features and isolate phenomena like keyholes and melt pools. Supports both continuous grayscale and binary normalization, with optional CLAHE illumination flattening.
+* **Image Normalization:** Background removal and contrast enhancement designed to resolve vague features and isolate phenomena like keyholes and melt pools. Supports both continuous grayscale and binary normalization, with optional CLAHE illumination flattening and a temporal moving median.
+* **Frame review:** Step through frames one at a time in the normalizer and in a comparison window. The comparison window can hide the original video and show only the normalized result.
+* **Batch keyhole pipeline:** Point at a folder of `.cine` files to normalize each one and then run YOLO keyhole tracking.
 
 ### 2. ML-Powered Object Segmenter
 * **Zero-Shot Detection:** Utilizes foundational **Segment Anything Models (SAM 1 & SAM 2)** for robust, prompt-based 2D, 3D, and 4D object segmentation. This drastically reduces the tedious manual labeling overhead required by traditional polygon methods, replacing it with efficient point-and-click or bounding-box interactions.
+* **Optional frame propagation:** In 2D segmentation, **Propagate frames** carries the current mask across the image sequence. SAM re-segments each next frame from the previous mask. Leave it unused if you prefer to label frames yourself.
 
 ### 3. ML-Powered Object Tracker
 * **Object Tracking:** Implements YOLOv8 and YOLOv12 architectures trained directly on SAM-generated masks for automated, continuous high-speed tracking of dynamic target objects (e.g., rapidly evolving keyhole vapor depressions during laser powder bed fusion process or movement of tool pin during friction stir welding process).
 
 ### 4. Interactive Geometry Feature Analyser
 * **Geometric Quantification:** Automatically extracts, quantifies, and plots temporal geometric metrics—such as object depth, width, area, and aspect ratio—derived directly from the tracking data.
-* **LLM Integration:** Automatically extracts, quantifies, and plots temporal geometric metrics—such as object deptFeatures a built-in interactive conversational assistant powered by Llama 3 (via Ollama). Users can seamlessly query their extracted datasets in natural language to quickly retrieve statistical insights and summaries.width, area, and aspect ratio—derived directly from the tracking data.
+* **LLM Integration:** A built-in conversational assistant powered by Llama 3 (via Ollama). Users can query extracted datasets in natural language for statistical summaries.
 
 ### Auxiliary feature
 * **Transient Event Tagger:** A dedicated interface for manually identifying, tagging, and exporting localized transient events (e.g., spatter, bubble formation, or pore generation) with precise spatial and temporal coordinates.
 
 ---
 
-## 📦 Installation Package Explanation
+## 📦 Download
 
-Due to large file sizes, the complete dataset, source code package, and tutorial materials are hosted externally. Python files can be found in the repository. If any modifications are made to Python files in the repository, users can seamlessly replace them with the updated files from the Google Drive below.
+Get the software from this GitHub repository. Use **Code → Download ZIP**, or clone it:
 
+```bash
+git clone https://github.com/dukyong414/SMAXI.git
+```
 
-### 🔗 [Download All Assets Here (Google Drive Link)](https://drive.google.com/drive/folders/1woC6zvyxjAKdQ0fuNuI6pKW8LH5Ltft8?usp=sharing)
+That download is the source code (`1. Python code/1_main.py`) and `2. Installation/requirements.txt`. You do not need a Google Drive zip to get the program.
 
-**The external repository contains:**
+Large files stay on Google Drive because GitHub is a poor place for model weights, sample cine/CT volumes, and the tutorial video. Open the folder below and download only the pieces you need. Avoid **Download all**, which packs every sample and model into one large zip.
+
+### 🔗 [Optional large files (Google Drive folder)](https://drive.google.com/drive/folders/1woC6zvyxjAKdQ0fuNuI6pKW8LH5Ltft8?usp=sharing)
+
+Download these folders individually:
+
+| What you need | Drive folder | Required? |
+| --- | --- | --- |
+| SAM weights | `1. Root folder/models` | Yes, for segmentation |
+| GUI background and logo | `2. [Image file] ...` | Yes, for the welcome screen |
+| Sample cine, CT, and YOLO labels | `3. [Sample file for input] ...` | No |
+| Example outputs and a trained YOLO weight | `4. [Output file of the software] ...` | No |
+| Tutorial slides and video | files at the top of the Drive folder | No |
+
+Place the GitHub `1. Python code` folder inside your `1. Root folder` (replace the older copy if you already downloaded one from Drive).
+
+**The Drive folder also contains:**
 
 * 📂 **1. Root folder:** The core software directory containing the main Python scripts, README.txt, requirements.txt, SAM 1&2 models 
 * 📂 **2. GUI Assets:**
@@ -83,9 +105,9 @@ Due to large file sizes, the complete dataset, source code package, and tutorial
 
 ### 1. Prerequisites & File Structure
 Before installing, ensure your project folder is organized as follows:
-* **`1. Python code/`**: Contains the source code (e.g., `main.py`).
-* **`models/`**: Stores SAM models (e.g., `sam_vit_b_01ec64.pth`).
-* **`requirements.txt`**: List of required Python libraries.
+* **`1. Python code/`**: Source code. Start the program with `1_main.py`.
+* **`models/`**: SAM weights (for example `sam_vit_b_01ec64.pth`), downloaded from Drive.
+* **`requirements.txt`**: Python libraries. In this repository the file is `2. Installation/requirements.txt`.
 
 ### 2. Installation Steps (Conda)
 
@@ -98,9 +120,10 @@ conda create -n xray_image_software python=3.12 pip spyder
 conda activate xray_image_software
 ```
 
-**Step 3: Install Python Libraries** Navigate to the root folder (where requirements.txt is located) and install dependencies:
+**Step 3: Install Python Libraries** From this repository, install `2. Installation/requirements.txt`. If you are using the full Drive package, the same file is also in `1. Root folder`.
+
 ```bash
-cd /d "Modify this path (PATH_TO_YOUR_SOFTWARE_FOLDER)_(file path must end with/1. Root folder)"
+cd /d "PATH_TO_SMAXI\2. Installation"
 pip install -r requirements.txt
 ```
 
@@ -124,7 +147,7 @@ Follow the steps below to launch the software using your preferred IDE.
    * Type **"Python: Select Interpreter"** and select it.
    * Choose the `xray_image_software` environment from the list.
 3. **Run the Application:**
-   * Open `main.py` from the file explorer.
+   * Open `1_main.py` from the file explorer.
    * Click the **Play** button in the top-right corner of the editor.
 
 ### [Option B] Using Spyder
@@ -137,7 +160,7 @@ Follow the steps below to launch the software using your preferred IDE.
    spyder
    ```
 3. **Run the Software**
-   * Once Spyder opens, open main.py from the file menu.
+   * Once Spyder opens, open `1_main.py` from the file menu.
    * Press F5 or click the green Run icon in the toolbar.
    
 
