@@ -1524,6 +1524,7 @@ class NormalizerApp:
         self.bg_frames = tk.IntVar(value=10)
         self.start_after_bg = tk.BooleanVar(value=True)
         self.window_size = tk.IntVar(value=5)
+        self.moving_bg_frames = tk.IntVar(value=21)
         self.use_moving_median = tk.BooleanVar(value=False)
         self.fps = tk.DoubleVar(value=30.0)
         self.use_gpu = tk.BooleanVar(value=utils.HAS_GPU_NORMALIZER)
@@ -1738,17 +1739,20 @@ class NormalizerApp:
         
         tk.Label(f_norm, text="Median window:").grid(row=4, column=2, padx=5, sticky="w")
         tk.Entry(f_norm, textvariable=self.window_size, width=6).grid(row=4, column=3, sticky="w")
+        tk.Label(f_norm, text="Moving BG frames:").grid(row=5, column=0, padx=5, sticky="w", pady=(6, 0))
+        tk.Entry(f_norm, textvariable=self.moving_bg_frames, width=6).grid(row=5, column=1, sticky="w", pady=(6, 0))
+        tk.Label(f_norm, text="(centered on each frame)", fg="#7F8C8D").grid(row=5, column=2, columnspan=2, sticky="w")
         tk.Checkbutton(
             f_norm,
-            text="Moving median (temporal) before normalization",
+            text="Moving median: smooth each frame, and divide by a moving background",
             variable=self.use_moving_median,
-        ).grid(row=11, column=0, columnspan=4, padx=5, sticky="w", pady=(6, 2))
+        ).grid(row=6, column=0, columnspan=4, padx=5, sticky="w", pady=(2, 2))
 
         tk.Label(
             f_norm,
             text="X-ray Enhancement (CLAHE + Local Contrast):",
             font=("Arial", 9, "bold"),
-        ).grid(row=5, column=0, columnspan=4, padx=5, sticky="w", pady=(8, 0))
+        ).grid(row=7, column=0, columnspan=4, padx=5, sticky="w", pady=(8, 0))
 
         tk.Button(
             f_norm,
@@ -1757,29 +1761,29 @@ class NormalizerApp:
             bg="#16A085",
             fg="white",
             font=("Arial", 9, "bold"),
-        ).grid(row=6, column=0, columnspan=4, padx=5, pady=4, sticky="ew")
+        ).grid(row=8, column=0, columnspan=4, padx=5, pady=4, sticky="ew")
 
         tk.Checkbutton(
             f_norm,
             text="Enable CLAHE",
             variable=self.norm_clahe,
             command=self.on_enhancement_change,
-        ).grid(row=7, column=0, columnspan=2, sticky="w", padx=5)
-        tk.Label(f_norm, text="Clip:").grid(row=7, column=2, padx=5, sticky="e")
-        tk.Entry(f_norm, textvariable=self.norm_clahe_clip, width=6).grid(row=7, column=3, sticky="w")
-        tk.Label(f_norm, text="Tile size:").grid(row=8, column=0, padx=5, sticky="w")
-        tk.Entry(f_norm, textvariable=self.norm_clahe_tile, width=6).grid(row=8, column=1, sticky="w")
+        ).grid(row=9, column=0, columnspan=2, sticky="w", padx=5)
+        tk.Label(f_norm, text="Clip:").grid(row=9, column=2, padx=5, sticky="e")
+        tk.Entry(f_norm, textvariable=self.norm_clahe_clip, width=6).grid(row=9, column=3, sticky="w")
+        tk.Label(f_norm, text="Tile size:").grid(row=10, column=0, padx=5, sticky="w")
+        tk.Entry(f_norm, textvariable=self.norm_clahe_tile, width=6).grid(row=10, column=1, sticky="w")
 
         tk.Checkbutton(
             f_norm,
             text="Enable Local Contrast",
             variable=self.local_contrast_enabled,
             command=self.on_enhancement_change,
-        ).grid(row=9, column=0, columnspan=2, sticky="w", padx=5, pady=(4, 0))
-        tk.Label(f_norm, text="Strength:").grid(row=10, column=0, padx=5, sticky="w")
-        tk.Entry(f_norm, textvariable=self.local_contrast_strength, width=6).grid(row=10, column=1, sticky="w")
-        tk.Label(f_norm, text="Radius:").grid(row=10, column=2, padx=5, sticky="e")
-        tk.Entry(f_norm, textvariable=self.local_contrast_radius, width=6).grid(row=10, column=3, sticky="w")
+        ).grid(row=11, column=0, columnspan=2, sticky="w", padx=5, pady=(4, 0))
+        tk.Label(f_norm, text="Strength:").grid(row=12, column=0, padx=5, sticky="w")
+        tk.Entry(f_norm, textvariable=self.local_contrast_strength, width=6).grid(row=12, column=1, sticky="w")
+        tk.Label(f_norm, text="Radius:").grid(row=12, column=2, padx=5, sticky="e")
+        tk.Entry(f_norm, textvariable=self.local_contrast_radius, width=6).grid(row=12, column=3, sticky="w")
 
         # 3. Visual Tools
         f_tools = tk.LabelFrame(left_col, text="3. Visual Adjustments (Original Only)", font=("Arial", 10, "bold"), bg="#EAECEE", fg="#C0392B")
@@ -2276,7 +2280,14 @@ class NormalizerApp:
             self._render_norm_preview(self.current_preview_raw, None)
             return
 
-        bg = self._load_preview_background(inp)
+        if self.use_moving_median.get():
+            idx = self.preview_frame_idx.get()
+            target = self._temporal_median_frame(idx, inp)
+            if target is not None:
+                self.current_preview_raw = target
+            bg = self._temporal_median_frame(idx, inp, self.moving_bg_frames.get())
+        else:
+            bg = self._load_preview_background(inp)
         if bg is None:
             messagebox.showwarning("Background", "Could not build background for preview.")
             return
@@ -2756,7 +2767,10 @@ class NormalizerApp:
 
             bg = None
             if not self._using_flatfield():
-                bg = self._load_preview_background(inp)
+                if self.use_moving_median.get():
+                    bg = self._temporal_median_frame(idx, inp, self.moving_bg_frames.get())
+                else:
+                    bg = self._load_preview_background(inp)
                 if bg is None:
                     return
 
@@ -2811,8 +2825,10 @@ class NormalizerApp:
         finally:
             self._scale_lock = False
 
-    def _temporal_median_frame(self, idx, inp=None):
-        window = odd_median_window(self.window_size.get())
+    def _temporal_median_frame(self, idx, inp=None, window=None):
+        if window is None:
+            window = self.window_size.get()
+        window = odd_median_window(window)
         total = self.file_listbox.size()
         if window <= 1 or total <= 0:
             raw = self._read_frame_raw(idx, inp)
@@ -2933,8 +2949,16 @@ class NormalizerApp:
             use_flat = self.use_flatfield.get() and self.flat_master is not None
             skip_grey_norm = use_flat  # flat-field replaces grey-scale temporal normalization
 
+            use_moving = bool(self.use_moving_median.get()) and not skip_grey_norm
+            med_w = odd_median_window(self.window_size.get())
+            bg_w = odd_median_window(self.moving_bg_frames.get())
             if skip_grey_norm:
                 self.log("Flat-field ON: skipping grey-scale temporal background normalization.")
+            elif use_moving:
+                self.log(
+                    f"Moving median window: {med_w}. "
+                    f"Moving background: median of {bg_w} frames around each frame."
+                )
             else:
                 self.log(
                     f"Background frames: {bg_start} to {bg_end - 1} "
@@ -2955,9 +2979,12 @@ class NormalizerApp:
                     return np.asarray(video[i], dtype=np.float32)
                 return self._safe_imread(files[i])
 
-            self.log(f"Loading {end - start} frame(s) to save...")
+            margin = max(med_w, bg_w) // 2 if use_moving else 0
+            load_start = max(0, start - margin)
+            load_end = min(total_frames, end + margin)
+            self.log(f"Loading {load_end - load_start} frame(s)...")
             raw_data = []
-            for i in range(start, end):
+            for i in range(load_start, load_end):
                 im = _load_idx(i)
                 if im is not None:
                     if use_flat:
@@ -2967,15 +2994,29 @@ class NormalizerApp:
             if not raw_data:
                 self.log("Error: Could not read any frames from disk.")
                 return
-            frames_cpu = np.array(raw_data)
-            if self.use_moving_median.get():
-                med_w = odd_median_window(self.window_size.get())
-                if med_w > 1:
-                    self.log(f"Applying moving median (window={med_w})...")
-                    frames_cpu = temporal_moving_median(frames_cpu, med_w)
+            source = np.asarray(raw_data, dtype=np.float32)
+            orig_cpu = None
+            bg_per_frame = None
+            if use_moving:
+                signal = temporal_moving_median(source, med_w) if med_w > 1 else source
+                bg_ext = temporal_moving_median(source, bg_w) if bg_w > 1 else source
+                if len(source) == (load_end - load_start):
+                    offset = start - load_start
+                    n_save = end - start
+                    orig_cpu = np.array(source[offset:offset + n_save], copy=True)
+                    frames_cpu = np.array(signal[offset:offset + n_save], copy=True)
+                    bg_per_frame = np.array(bg_ext[offset:offset + n_save], copy=True)
+                else:
+                    self.log("Some frames could not be read; moving background uses the loaded frames only.")
+                    orig_cpu = source
+                    frames_cpu = signal
+                    bg_per_frame = bg_ext
+                del source, signal, bg_ext
+            else:
+                frames_cpu = source
 
             bg_cpu = None
-            if not skip_grey_norm:
+            if not skip_grey_norm and not use_moving:
                 self.log("Loading background frames...")
                 bg_list = []
                 for i in range(bg_start, bg_end):
@@ -2988,25 +3029,50 @@ class NormalizerApp:
                     return
                 bg_cpu = np.array(bg_list).astype(np.float32)
 
+            if use_moving:
+                using_gpu = False
+                self.log("Moving background stays on CPU (a separate background for each frame).")
+
             if using_gpu:
                 utils.init_gpu_normalizer()
                 try:
                     import cupy as cp
                     import cupyx.scipy.ndimage  # noqa: F401
-                except ImportError:
-                    using_gpu = False
-                    self.log("CuPy not available; falling back to CPU.")
-                else:
+                    need = int(frames_cpu.size) * 4
+                    free_gpu, _total_gpu = cp.cuda.runtime.memGetInfo()
+                    # Uploading the whole movie pins a second copy in host RAM.
+                    # On Windows that pin fails with cudaErrorAlreadyMapped once the
+                    # stack is larger than the GPU or the lockable-page limit.
+                    if need > 768 * 1024 * 1024 or need > int(free_gpu * 0.55):
+                        raise MemoryError(
+                            f"stack is {need / (1024 ** 3):.2f} GB, "
+                            f"free GPU memory is {free_gpu / (1024 ** 3):.2f} GB"
+                        )
                     self.log("Moving to GPU...")
-                    frames_data = cp.array(frames_cpu)
-                    bg_data = cp.mean(cp.array(bg_cpu), axis=0).astype(cp.float32) if bg_cpu is not None else None
+                    frames_data = cp.array(np.ascontiguousarray(frames_cpu))
+                    bg_data = (
+                        cp.mean(cp.array(bg_cpu), axis=0).astype(cp.float32)
+                        if bg_cpu is not None else None
+                    )
                     xp = cp
+                except Exception as e:
+                    using_gpu = False
+                    self.log(f"GPU upload skipped ({e}). Continuing on CPU.")
+                    try:
+                        import cupy as cp
+                        cp.get_default_memory_pool().free_all_blocks()
+                        cp.get_default_pinned_memory_pool().free_all_blocks()
+                    except Exception:
+                        pass
             if not using_gpu:
                 frames_data = frames_cpu
                 xp = np
-                bg_data = np.mean(bg_cpu, axis=0).astype(np.float32) if bg_cpu is not None else None
+                if bg_per_frame is not None or bg_cpu is None:
+                    bg_data = None
+                else:
+                    bg_data = np.mean(bg_cpu, axis=0).astype(np.float32)
 
-            if not skip_grey_norm:
+            if not skip_grey_norm and bg_per_frame is None and bg_data is not None:
                 self.log("Calculating Background...")
                 if mode == "binary":
                     if using_gpu:
@@ -3030,9 +3096,10 @@ class NormalizerApp:
             for i in range(len(frames_data)):
                 curr_raw = frames_data[i].astype(xp.float32)
                 raw_cpu = frames_data[i].get() if using_gpu else frames_data[i]
+                shown_cpu = orig_cpu[i] if orig_cpu is not None else raw_cpu
 
                 # EXPORT ORIGINAL (Using Visual Enhancements)
-                vis_frame = self.apply_visuals(raw_cpu.astype(np.float32))
+                vis_frame = self.apply_visuals(np.asarray(shown_cpu, dtype=np.float32))
                 out_orig.write(cv2.cvtColor(vis_frame, cv2.COLOR_GRAY2BGR))
 
                 if save_vis_imgs:
@@ -3052,7 +3119,14 @@ class NormalizerApp:
                     else:
                         curr = curr_raw
 
-                    norm = xp.divide(curr * (bg_mean / (xp.mean(curr)+1e-6)), bg_data + 1e-6)
+                    if bg_per_frame is not None:
+                        bg_frame = np.asarray(bg_per_frame[i], dtype=np.float32)
+                        if mode == "binary":
+                            bg_frame = scipy.ndimage.gaussian_filter(bg_frame, 1.0)
+                        frame_bg_mean = float(np.mean(bg_frame))
+                        norm = (curr * (frame_bg_mean / (float(np.mean(curr)) + 1e-6))) / (bg_frame + 1e-6)
+                    else:
+                        norm = xp.divide(curr * (bg_mean / (xp.mean(curr)+1e-6)), bg_data + 1e-6)
                     
                     if mode == "grey":
                         res = ((xp.clip(norm, min_r, max_r) - min_r) * scale_fac).astype(xp.uint8)
@@ -3099,8 +3173,16 @@ class NormalizerApp:
     def _stack_to_norm_u8(self, frames):
         """Normalize a prepared float stack (T,H,W) with the current settings."""
         frames = np.asarray(frames, dtype=np.float32)
-        if self.use_moving_median.get():
-            frames = temporal_moving_median(frames, self.window_size.get())
+        checkbox = bool(self.use_moving_median.get())
+        use_moving = checkbox and not self._using_flatfield()
+        bg_stack = None
+        if use_moving:
+            bg_w = odd_median_window(self.moving_bg_frames.get())
+            bg_stack = temporal_moving_median(frames, bg_w) if bg_w > 1 else frames
+        if checkbox:
+            med_w = odd_median_window(self.window_size.get())
+            if med_w > 1:
+                frames = temporal_moving_median(frames, med_w)
         if self._using_flatfield():
             return np.stack([self._flat_corrected_to_u8(fr) for fr in frames])
         total = len(frames)
@@ -3108,21 +3190,29 @@ class NormalizerApp:
         start, end = self._process_index_range(total)
         if start >= end:
             start, end = 0, total
-        bg = np.mean(frames[bg_start:bg_end], axis=0).astype(np.float32)
+        bg = None if use_moving else np.mean(frames[bg_start:bg_end], axis=0).astype(np.float32)
         mode = self.norm_mode.get()
-        if mode == "binary":
+        if bg is not None and mode == "binary":
             bg = scipy.ndimage.gaussian_filter(bg, 1.0)
-        bg_mean = float(np.mean(bg))
+        bg_mean = float(np.mean(bg)) if bg is not None else 0.0
         min_r = float(self.min_ratio.get())
         max_r = float(self.max_ratio.get())
         scale = 255.0 / max(max_r - min_r, 1e-6)
         thresh = float(self.binary_thresh.get())
         chosen = frames[start:end]
+        chosen_bg = None if bg_stack is None else bg_stack[start:end]
         out = np.empty(chosen.shape, dtype=np.uint8)
         for i, curr in enumerate(chosen):
             if mode == "binary":
                 curr = scipy.ndimage.gaussian_filter(curr, 1.0)
-            norm = (curr * (bg_mean / (float(np.mean(curr)) + 1e-6))) / (bg + 1e-6)
+            if chosen_bg is not None:
+                bg_frame = np.asarray(chosen_bg[i], dtype=np.float32)
+                if mode == "binary":
+                    bg_frame = scipy.ndimage.gaussian_filter(bg_frame, 1.0)
+                frame_bg_mean = float(np.mean(bg_frame))
+                norm = (curr * (frame_bg_mean / (float(np.mean(curr)) + 1e-6))) / (bg_frame + 1e-6)
+            else:
+                norm = (curr * (bg_mean / (float(np.mean(curr)) + 1e-6))) / (bg + 1e-6)
             if mode == "grey":
                 res = np.clip(norm, min_r, max_r)
                 res = ((res - min_r) * scale).astype(np.uint8)

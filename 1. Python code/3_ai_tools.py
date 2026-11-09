@@ -13,6 +13,8 @@ if str(_SUPPORT_DIR) not in sys.path:
 def _load_local_module(name, filename):
     if name not in sys.modules:
         path = _PACKAGE_DIR / filename
+        if not path.is_file():
+            raise FileNotFoundError(path)
         spec = importlib.util.spec_from_file_location(name, path)
         module = importlib.util.module_from_spec(spec)
         sys.modules[name] = module
@@ -20,20 +22,38 @@ def _load_local_module(name, filename):
     return sys.modules[name]
 
 
+def _load_first_available(name, filenames):
+    last_error = None
+    for filename in filenames:
+        try:
+            return _load_local_module(name, filename)
+        except (ImportError, FileNotFoundError, OSError) as exc:
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+    raise FileNotFoundError(filenames[0] if filenames else name)
+
+
 _load_local_module("utils", "0_utils.py")
 from utils import *
 import utils
 
 try:
-    _load_local_module("sam_benchmark_gui", "support/benchmarks/sam_benchmark_test.py")
+    _load_first_available(
+        "sam_benchmark_gui",
+        ("support/benchmarks/sam_benchmark_test.py", "3_SAM_benchmark_test.py"),
+    )
     from sam_benchmark_gui import SamBenchmarkFrame
-except ImportError:
+except (ImportError, FileNotFoundError, OSError):
     SamBenchmarkFrame = None
 
 try:
-    _load_local_module("yolo_demonstration", "support/benchmarks/yolo_benchmark_test.py")
+    _load_first_available(
+        "yolo_demonstration",
+        ("support/benchmarks/yolo_benchmark_test.py", "3_YOLO_benchmark_test.py"),
+    )
     from yolo_demonstration import SMAXIYoloDemo
-except ImportError:
+except (ImportError, FileNotFoundError, OSError):
     SMAXIYoloDemo = None
 
 try:

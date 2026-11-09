@@ -29,7 +29,7 @@ SMAXI is structured into four primary analytical modules, supplemented by advanc
 
 ### 1. Image Pre-processor (Image Stabilization & Normalization)
 * **Thermal Drift Correction:** Computer vision-assisted automated stabilization of high-speed x-ray images to track and correct for thermal drift-triggered surface shifts (e.g., substrate's thermal expansion during laser powder bed fusion).
-* **Image Normalization:** Background removal and contrast enhancement designed to resolve vague features and isolate phenomena like keyholes and melt pools. Supports both continuous grayscale and binary normalization, with optional CLAHE illumination flattening and a temporal moving median.
+* **Image Normalization:** Background removal and contrast enhancement designed to resolve vague features and isolate phenomena like keyholes and melt pools. Supports both continuous grayscale and binary normalization, with optional CLAHE illumination flattening. The temporal moving median can divide each frame by a sliding background, and the background length is a number you set. A fixed background from the start of the clip is still available when that option is off.
 * **Frame review:** Step through frames one at a time in the normalizer and in a comparison window. The comparison window can hide the original video and show only the normalized result.
 * **Batch keyhole pipeline:** Point at a folder of `.cine` files to normalize each one and then run YOLO keyhole tracking.
 
