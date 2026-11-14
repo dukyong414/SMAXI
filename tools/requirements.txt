@@ -1,0 +1,17 @@
+# Extra packages for tools/seg_correct_gui.py and tools/maskrcnn_train.py.
+# The main SMAXI environment already provides numpy, torch, torchvision, and
+# opencv. If opencv-python is installed, do not also install the headless wheel.
+numpy
+opencv-python-headless
+PySide6
+pyyaml
+torch
+torchvision
+
+# Optional: click-to-segment in the correction GUI.
+# segment-anything
+
+# Optional: the training script reports pore AP with a COCO-style numpy
+# equivalent either way. Install this only if you want the official package
+# available in the same environment.
+# pycocotools
