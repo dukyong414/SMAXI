@@ -173,6 +173,69 @@ Below is the tutorial video.
 
 
 
+## Keyhole and pore tools
+
+Two standalone tools sit next to the main SMAXI app. They use the corrected keyhole/pore dataset layout:
+
+```text
+images/{train,val}/<Test####_T#>_<frame:05d>.png
+labels/{train,val}/<same>.txt
+ids/{train,val}/<same>.json
+```
+
+Each label line is a YOLO-seg polygon, `cls x1 y1 x2 y2 ...`, with normalized coordinates. Class 0 is the keyhole and class 1 is a pore. The ids sidecar is a JSON list aligned with those lines: `id` is the persistent pore track id, or `null` for a keyhole, and `src` records where the instance came from (`sam_prop`, `blob`, `interp_fix`, `yolo`, `manual`, `maskrcnn`). A dataset yaml in the usual YOLO shape (`path`, `train`, `val`, `names`) can point `train` and `val` at text files of image paths.
+
+Install the extra packages with `pip install -r tools/requirements.txt`. The main SMAXI environment already has PyTorch, torchvision, and OpenCV. SAM (`segment-anything` plus a vit_b checkpoint) is optional. `pycocotools` is optional; pore average precision is computed with the same 101-point interpolation and 0.50:0.05:0.95 IoU grid either way.
+
+### Segmentation correction GUI
+
+The editor is PySide6 plus OpenCV. Qt gives the frame slider, keyboard shortcuts, and dialogs. OpenCV rasterizes polygons, brush strokes, and cuts. That is lighter than napari, which is built for viewing volumes and pulls in VisPy and a plugin host just to edit vertices. The window still opens when SAM is not installed: the SAM tool is disabled and the status line says why.
+
+```bash
+python tools/seg_correct_gui.py --root D:\data\kp_dataset_v3 --out D:\data\kp_dataset_v3_corrected
+```
+
+Useful flags:
+
+* `--audit audit.csv` — frames to jump to. A row matches on `path`, or `name`+`frame`, or `cine`+`track`+`frame`. An optional `flag` column can mark a row as clean (`0` / `ok`); every other row is flagged. `reason` is shown on the frame.
+* `--manifest manifest.csv` — optional `split,cine,track,name,frame,laser_on,kh,n_pores,amb,neg`. If you omit it, `<root>/manifest.csv` is used when it exists.
+* `--sam-checkpoint models\sam_vit_b_01ec64.pth` and `--device cuda` — click-to-segment. Left click includes, right click excludes, Enter accepts the mask.
+* `--resume` / `--no-resume` — resume is the default: a frame that already has a corrected label under `--out` opens that file. `--no-resume` loads the input labels again. Saving still goes to `--out`.
+
+The input tree is never written. Passing the dataset root as `--out` is refused. Each save writes `labels/<split>/<stem>.txt` and `ids/<split>/<stem>.json` with `src` set to `manual`, appends `edit_log.csv`, and can mark the frame reviewed. `reviewed.csv` is the frame-level progress file.
+
+Browse with the cine and track menus, the slider, and Left/Right. Shift+arrows jump between audit flags. Overlays are cyan for the keyhole and pink for pores, with the pore track id drawn on the mask. Opacity, contrast, and gamma are sliders; the channel menu picks the mean or one channel of a 3-frame RGB stack. Editing covers new polygons, vertex insert/move/delete, brush, eraser, class change (`K` / `P`), merge (`M`), split (draw a cut or break disconnected pieces), pore id assignment (`I`), and copy or gap-fill from the previous or next frame (`C` / `G`). Ctrl+Z / Ctrl+Y undo and redo. Ctrl+S saves. The Shortcuts dialog lists the rest. `python tools/seg_correct_gui.py --self-test` runs the label IO checks without opening a window.
+
+### Mask R-CNN train / evaluate / predict
+
+`tools/maskrcnn_train.py` is a cleaned-up replacement for the one-off `alt_v3.py` fallback (torchvision `maskrcnn_resnet50_fpn_v2`, COCO initialization, `min_size` 576). It has a `main` guard, so a DataLoader is safe to use where the old script was not.
+
+```bash
+python tools/maskrcnn_train.py train --data data_final.yaml --out runs\keyhole_pore_maskrcnn --iters 4000 --batch 2 --lr 1e-4 --min-size 576 --max-size 960 --amp --workers 0
+python tools/maskrcnn_train.py train --data data_final.yaml --out runs\keyhole_pore_maskrcnn --resume runs\keyhole_pore_maskrcnn\last.pt --iters 8000
+python tools/maskrcnn_train.py evaluate --data data_final.yaml --weights runs\keyhole_pore_maskrcnn\best.pt --split val
+python tools/maskrcnn_train.py predict --data data_final.yaml --weights runs\keyhole_pore_maskrcnn\best.pt --out preds --split val --score-thresh 0.01
+python tools/maskrcnn_train.py smoke --out runs\smoke
+```
+
+`train` takes the yaml or `--root`, and `--iters`, `--batch`, `--lr`, `--min-size`, `--max-size`, `--backbone-layers`, `--amp`, and `--workers`. Checkpoints (`last.pt` every `--ckpt-every` steps, and `best.pt` on a smoothed training loss) store the optimizer and the iteration, so `--resume` continues. On Windows, `--workers` defaults to 0. On Linux the default is 2. AMP is used only with `--amp` on CUDA.
+
+`evaluate` writes `metrics.json` with pore AP50, pore AP50-95, and pore recall at IoU 0.50 (a ground-truth pore counts once). Matching is greedy by score inside each image, then pooled, using the COCO 101-point curve. Keyhole numbers are included under `per_class`. `--pycocotools` also runs the official mask evaluation when that package is installed and stores it under the `pycocotools` key; the `pore_AP*` fields stay the numpy equivalent.
+
+`predict` writes one YOLO-seg file per frame under `preds/labels/<split>/` and an ids sidecar under `preds/ids/<split>/`. The polygon is normalized and the detector score is the last field (`cls x1 y1 ... score`), with `src` `maskrcnn` in the sidecar, so an existing tracker can rank instances. `summary.csv` lists counts per frame. Files are replaced atomically and flushed as each frame finishes.
+
+`alt_v3.py` trained, logged inference for the last held-out track, and then stopped making progress until its own 15-minute watchdog killed it. Two defects line up with that:
+
+* After the last track the script waits on `eval_v3.py`. The watchdog only treats the job as alive when `eval_v3_alt/eval.log` has been touched in the last 10 minutes. The child is started with block-buffered stdout sent to a different file (`logs/alt_eval.log`). If `eval.log` is missing, written once, or flushed late, the parent never refreshes its heartbeat and the watchdog fires. The last line in the log is the last track.
+* The training loader is a `ThreadPoolExecutor` that is never shut down. It feeds a bounded queue, and stopping the iterator early (iteration cap or time budget) leaves the producer blocked in `Queue.put`. Those pool threads are non-daemon, so `sys.exit` waits forever even if eval itself returns. The script also has no `if __name__ == "__main__"` guard. That is why it could not use a normal DataLoader: on Windows, spawn re-imports the module in every worker and would enter training again. Tearing down CUDA while those threads are still alive is a second shutdown hang, and `pickle.dump(open(...))` without closing the handle can lock the cache file the eval process is trying to read.
+
+The replacement shuts every DataLoader down in `finally`, defaults workers to 0 on Windows, synchronizes CUDA before returning, turns the OpenCV thread pool off (so it cannot deadlock with PyTorch at exit), and writes outputs with flush, fsync, and atomic replace. A stall watchdog (default 15 minutes, `--stall-seconds 0` to disable) still hard-exits if a step stops calling its heartbeat; the smoke test leaves it off and has to return on its own.
+
+```bash
+python tests/test_seg_io.py
+python tests/test_maskrcnn_smoke.py
+```
+
 ## 📬 Contact
 
 Dukyong Kim: kdy0414@u.northwestern.edu
